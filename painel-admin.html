@@ -362,6 +362,7 @@ CREATE POLICY "allow_insert_update" ON survey_responses
         <div style="display:flex;gap:8px;">
           <button class="btn btn-teal" onclick="loadResponses()">↻ Recarregar</button>
           <button class="btn btn-ghost" onclick="exportCSV()">⬇ Exportar CSV</button>
+          <button class="btn btn-danger" onclick="clearDatabase()">🗑 Limpar banco</button>
         </div>
       </div>
       <div class="responses-table-wrap">
@@ -372,6 +373,90 @@ CREATE POLICY "allow_insert_update" ON survey_responses
           <tbody id="responses-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-dim)">Carregando...</td></tr></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- ── STATS PANE ─────────────────────────────────────────── -->
+  <div class="pane" id="pane-stats">
+    <div class="stats-pane">
+      <h2>Análises Estatísticas</h2>
+      <p class="sub">Testes calculados em tempo real sobre os dados do Supabase. Clique em <strong>▶ Executar</strong> em cada análise.</p>
+      <div class="min-n-warn" id="stats-min-warn" style="display:none">
+        ⚠ Amostra menor que 20 respostas — resultados têm valor exploratório. Inferências requerem n ≥ 30 por grupo.
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">1 — Estatísticas Descritivas</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">Resumo das escalas Likert (Q6, Q13, Q18, Q24, Q26)</div>
+            <div class="stats-card-desc">n, mínimo, máximo, média, mediana, desvio padrão e IQR.</div></div>
+            <button class="stats-run-btn" onclick="runDescriptive()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-desc"></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">2 — Kruskal-Wallis H (comparação entre países)</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">H₀: distribuições iguais entre Brasil, Canadá, Chile e Peru</div>
+            <div class="stats-card-desc">Teste não-paramétrico para comparar medianas de variáveis ordinais entre os 4 países.</div></div>
+            <button class="stats-run-btn" onclick="runKruskal()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-kruskal"></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">3 — χ² de Pearson (perfil × variáveis categóricas)</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">H₀: independência entre perfil do respondente e respostas categóricas</div>
+            <div class="stats-card-desc">Associação entre perfil e Q9 (análise de risco), Q10 (estratégia), Q20 (governança).</div></div>
+            <button class="stats-run-btn" onclick="runChiSquare()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-chi"></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">4 — Correlação ρ de Spearman (matriz 5×5)</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">Correlações entre Risco, Custo, Regulação, Licença Social e Maturidade</div>
+            <div class="stats-card-desc">Não-paramétrica. Verde = |ρ| ≥ 0.30. Inclui p-values com marcadores de significância.</div></div>
+            <button class="stats-run-btn" onclick="runSpearman()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-spearman"></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">5 — Clusters K-Means (k=3)</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">Agrupamento por perfil de maturidade adaptativa</div>
+            <div class="stats-card-desc">3 clusters (baixa / intermediária / alta maturidade) sobre as 5 escalas Likert. Centróides e composição por país e perfil.</div></div>
+            <button class="stats-run-btn" onclick="runKMeans()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-kmeans"></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">6 — α de Cronbach (confiabilidade do instrumento)</div>
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div><div class="stats-card-title">Consistência interna por dimensão do questionário</div>
+            <div class="stats-card-desc">α ≥ 0.70 = aceitável para publicação. Calculado para Vulnerabilidade, Governança, Socioambiental e instrumento completo.</div></div>
+            <button class="stats-run-btn" onclick="runCronbach()">▶ Executar</button>
+          </div>
+          <div class="stats-result" id="res-cronbach"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1442,6 +1527,35 @@ function exportCSV(){
   const blob=new Blob([[header,...rows].join('\n')],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='mining_research_'+Date.now()+'.csv'; a.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLEAR DATABASE
+// ══════════════════════════════════════════════════════════════
+async function clearDatabase(){
+  if(!confirm('⚠ Isso apagará TODAS as respostas do Supabase permanentemente.\nEssa ação não pode ser desfeita.\n\nTem certeza?')) return;
+  if(!confirm('Confirme novamente: apagar todas as respostas?')) return;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/survey_responses?id=gt.0`,
+      {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Prefer': 'return=minimal'
+        }
+      }
+    );
+    if(!res.ok){ const e=await res.text(); throw new Error(e); }
+    responses = [];
+    updateBadge();
+    renderResponsesTable();
+    renderDashboard();
+    alert('✓ Banco de dados limpo com sucesso.');
+  } catch(e){
+    alert('Erro ao limpar: ' + e.message);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
