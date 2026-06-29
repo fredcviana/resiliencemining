@@ -170,6 +170,29 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
 .completed-chip.yes{background:rgba(76,175,122,.15);color:var(--green);}
 .completed-chip.no{background:var(--bg4);color:var(--text-dim);}
 
+/* ── STATS PANE ──────────────────────────────────────── */
+.stats-pane{padding:24px;overflow-y:auto;flex:1;}
+.stats-pane h2{font-family:"Space Grotesk",sans-serif;font-size:1.3rem;color:var(--white);margin-bottom:4px;}
+.stats-pane .sub{font-size:13px;color:var(--text-mid);margin-bottom:24px;line-height:1.6;}
+.stats-section{margin-bottom:28px;}
+.stats-section-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--copper);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.stats-section-title::after{content:"";flex:1;height:1px;background:var(--border);}
+.stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:10px;}
+.stats-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px;}
+.stats-card-title{font-size:13px;font-weight:600;color:var(--text);}
+.stats-card-desc{font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.5;}
+.stats-run-btn{padding:6px 14px;background:var(--copper);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:"Inter",sans-serif;white-space:nowrap;flex-shrink:0;}
+.stats-run-btn:hover{filter:brightness(1.1);}
+.stats-run-btn:disabled{opacity:.4;cursor:not-allowed;}
+.stats-result{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.8;color:var(--text-mid);background:var(--bg);border-radius:7px;padding:14px;margin-top:8px;display:none;overflow-x:auto;}
+.stats-result.show{display:block;}
+.stats-result .sig{color:var(--teal);font-weight:700;}
+.stats-result .nosig{color:var(--amber);}
+.stats-result .label{color:var(--copper);}
+.stats-result .val{color:var(--white);}
+.stats-result .note{color:var(--text-dim);font-size:11px;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.min-n-warn{background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.2);border-radius:7px;padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:16px;}
 @media(max-width:900px){
   .stat-grid{grid-template-columns:repeat(2,1fr);}
   .chart-grid.cols2{grid-template-columns:1fr;}
@@ -197,6 +220,7 @@ let SUPABASE_ANON = localStorage.getItem('sb_anon') || 'eyJhbGciOiJIUzI1NiIsInR5
     <div class="topbar-tab" onclick="switchPane('editor')" id="tab-editor">✏ Editor</div>
     <div class="topbar-tab" onclick="switchPane('dashboard')" id="tab-dashboard">📊 Dashboard</div>
     <div class="topbar-tab" onclick="switchPane('responses')" id="tab-responses">📋 Respostas</div>
+    <div class="topbar-tab" onclick="switchPane('stats')" id="tab-stats">🧮 Análises Estatísticas</div>
   </div>
   <div class="topbar-right">
     <div class="live-dot" title="Live — dados em tempo real"></div>
@@ -518,6 +542,7 @@ function switchPane(name){
   if(name==='editor') renderQList();
   if(name==='dashboard') renderDashboard();
   if(name==='responses') renderResponsesTable();
+  if(name==='stats') initStats();
   if(name==='config'){
     document.getElementById('inp-url').value=SUPABASE_URL||'';
     document.getElementById('inp-anon').value=SUPABASE_ANON||'';
@@ -916,6 +941,492 @@ function drawCharts(section,data){
     }).filter(d=>d.data.some(v=>v>0));
     mkRadar('chart-profile-radar',['Risco','Custo','Lic. Social','Regulação','Maturidade'],datasets);
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// ANÁLISES ESTATÍSTICAS
+// ══════════════════════════════════════════════════════════════
+
+function initStats(){
+  const n = responses.length;
+  document.getElementById('stats-min-warn').style.display = n < 20 ? 'block' : 'none';
+}
+
+// ── HELPERS ESTATÍSTICOS ─────────────────────────────────────
+function getLikertVals(data, qid){
+  return data.map(r => r.answers[qid]?.value)
+             .filter(v => v !== undefined && v !== null)
+             .map(Number);
+}
+
+function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function median(arr){
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
+function std(arr){
+  if(arr.length<2) return 0;
+  const m=mean(arr);
+  return Math.sqrt(arr.reduce((s,x)=>s+(x-m)**2,0)/(arr.length-1));
+}
+function variance(arr){ const s=std(arr); return s*s; }
+
+// Rank array (ties = average rank)
+function rank(arr){
+  const indexed = arr.map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
+  const ranks = new Array(arr.length);
+  let i=0;
+  while(i<indexed.length){
+    let j=i;
+    while(j<indexed.length && indexed[j].v===indexed[i].v) j++;
+    const avgRank = (i+j+1)/2; // average rank for ties
+    for(let k=i;k<j;k++) ranks[indexed[k].i]=avgRank;
+    i=j;
+  }
+  return ranks;
+}
+
+// Spearman rho
+function spearman(x, y){
+  if(x.length !== y.length || x.length < 3) return NaN;
+  const rx=rank(x), ry=rank(y);
+  const n=x.length;
+  const mx=mean(rx), my=mean(ry);
+  let num=0,dx=0,dy=0;
+  for(let i=0;i<n;i++){
+    num+=(rx[i]-mx)*(ry[i]-my);
+    dx+=(rx[i]-mx)**2;
+    dy+=(ry[i]-my)**2;
+  }
+  return num/Math.sqrt(dx*dy);
+}
+
+// p-value approximation from t-distribution (two-tailed, df=n-2)
+function pFromT(t, df){
+  // Approximation using incomplete beta function
+  const x = df/(df+t*t);
+  const a = df/2, b = 0.5;
+  const beta = incompleteBeta(x, a, b);
+  return Math.min(1, beta);
+}
+function incompleteBeta(x, a, b){
+  // Continued fraction approximation
+  if(x<=0) return 0; if(x>=1) return 1;
+  const lbeta = lgamma(a)+lgamma(b)-lgamma(a+b);
+  const front = Math.exp(Math.log(x)*a + Math.log(1-x)*b - lbeta)/a;
+  return front * betacf(x,a,b);
+}
+function betacf(x,a,b){
+  const MAXIT=100, EPS=3e-7;
+  let qab=a+b, qap=a+1, qam=a-1;
+  let c=1, d=1-qab*x/qap; if(Math.abs(d)<1e-30) d=1e-30; d=1/d;
+  let h=d;
+  for(let m=1;m<=MAXIT;m++){
+    let m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d; if(Math.abs(d)<1e-30) d=1e-30;
+    c=1+aa/c; if(Math.abs(c)<1e-30) c=1e-30;
+    d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d; if(Math.abs(d)<1e-30) d=1e-30;
+    c=1+aa/c; if(Math.abs(c)<1e-30) c=1e-30;
+    d=1/d; let del=d*c; h*=del;
+    if(Math.abs(del-1)<EPS) break;
+  }
+  return h;
+}
+function lgamma(x){
+  // Stirling approximation
+  const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x, tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+  let ser=1.000000000190015;
+  for(let j=0;j<6;j++) ser+=c[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+
+// Chi-square p-value (approximation)
+function chiSqPValue(chi2, df){
+  if(df<=0||chi2<0) return 1;
+  return 1 - gammainc(chi2/2, df/2);
+}
+function gammainc(x, a){
+  // Regularized incomplete gamma function (series)
+  if(x<0||a<=0) return 0;
+  if(x===0) return 0;
+  let sum=1/a, term=1/a;
+  for(let n=1;n<=200;n++){
+    term*=x/(a+n); sum+=term;
+    if(Math.abs(term)<1e-8*Math.abs(sum)) break;
+  }
+  return sum*Math.exp(-x+a*Math.log(x)-lgamma(a));
+}
+
+function pLabel(p){
+  if(isNaN(p)||p===null) return '<span class="nosig">n/a</span>';
+  if(p<0.001) return `<span class="sig">p &lt; 0.001 ***</span>`;
+  if(p<0.01)  return `<span class="sig">p = ${p.toFixed(3)} **</span>`;
+  if(p<0.05)  return `<span class="sig">p = ${p.toFixed(3)} *</span>`;
+  return `<span class="nosig">p = ${p.toFixed(3)} ns</span>`;
+}
+
+function showResult(id, html){
+  const el = document.getElementById(id);
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
+// ── 1. KRUSKAL-WALLIS ─────────────────────────────────────────
+function runKruskal(){
+  const data = filteredResponses();
+  const countries = ['Brasil','Canadá','Chile','Peru'];
+  const vars = [
+    {qid:'q6',  label:'Risco climático (Q6)'},
+    {qid:'q13', label:'Impacto em custos (Q13)'},
+    {qid:'q18', label:'Avaliação regulatória (Q18)'},
+    {qid:'q24', label:'Licença social (Q24)'},
+    {qid:'q26', label:'Maturidade (Q26)'},
+  ];
+
+  let html = `<span class="label">Kruskal-Wallis H (comparação entre ${countries.filter(c=>data.filter(r=>r.country===c).length>0).join(', ')})</span>
+`;
+  html += `<span class="note">H₀: distribuições iguais entre países  |  α = 0.05  |  n = ${data.length}</span>
+
+`;
+  html += `${'Variável'.padEnd(32)} ${'H'.padStart(7)} ${'df'.padStart(4)} ${'p-value'.padStart(14)}   Conclusão
+`;
+  html += '─'.repeat(80) + '
+';
+
+  vars.forEach(({qid, label}) => {
+    const groups = countries.map(c => getLikertVals(data.filter(r=>r.country===c), qid)).filter(g=>g.length>0);
+    if(groups.length < 2 || groups.flat().length < 6){ html += `${label.padEnd(32)} ${'—'.padStart(7)} ${'—'.padStart(4)} ${'n insuf.'.padStart(14)}
+`; return; }
+
+    // Kruskal-Wallis H statistic
+    const all = groups.flat();
+    const N = all.length;
+    const allRanks = rank(all);
+    let pos = 0;
+    const groupRankSums = groups.map(g => {
+      const sum = allRanks.slice(pos, pos+g.length).reduce((a,b)=>a+b,0);
+      pos += g.length;
+      return {n:g.length, sum};
+    });
+    const H = (12/(N*(N+1))) * groupRankSums.reduce((s,g)=>s+(g.sum**2)/g.n,0) - 3*(N+1);
+    const df = groups.length - 1;
+    const p = 1 - gammainc(H/2, df/2);
+    const sig = p < 0.05 ? '✓ Sig.' : '— n.s.';
+    html += `${label.padEnd(32)} <span class="val">${H.toFixed(3).padStart(7)}</span> <span class="val">${String(df).padStart(4)}</span> ${pLabel(p).padStart(14)}   ${p<0.05?'<span class="sig">'+sig+'</span>':'<span class="nosig">'+sig+'</span>'}
+`;
+  });
+
+  html += `
+<span class="note">* p &lt; 0.05  ** p &lt; 0.01  *** p &lt; 0.001  ns = não significativo</span>`;
+  showResult('res-kruskal', html);
+}
+
+// ── 2. QUI-QUADRADO ───────────────────────────────────────────
+function runChiSquare(){
+  const data = filteredResponses();
+  const profiles = ['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)'];
+  const shortP = ['Gestor','Técnico','ESG','Regulador'];
+  const vars = [
+    {qid:'q9',  label:'Análise formal de risco (Q9)',  opts:['Sim, completa e publicada','Sim, interna não publicada','Em desenvolvimento','Não, mas há planos','Não e sem planos']},
+    {qid:'q10', label:'Estratégia de adaptação (Q10)', opts:['Sim, aprovada e implementada','Sim, aprovada em fase inicial','Em desenvolvimento','Adaptações informais pontuais','Não há estratégia']},
+    {qid:'q20', label:'Governança climática (Q20)',     opts:['Totalmente integrado (Conselho, metas de remuneração)','Parcialmente (comitê ou responsável dedicado)','Em processo de integração','Apenas nível operacional','Não integrado']},
+  ];
+
+  let html = `<span class="label">χ² de Pearson: Perfil do respondente × variáveis categóricas</span>
+`;
+  html += `<span class="note">H₀: independência entre perfil e resposta  |  α = 0.05  |  n = ${data.length}</span>
+
+`;
+
+  vars.forEach(({qid, label, opts}) => {
+    // Build contingency table: rows=profiles, cols=opts
+    const table = profiles.map(p =>
+      opts.map(o => data.filter(r => (r.profile===p||getAns(r,'q2')===p) && getAns(r,qid)===o).length)
+    );
+    const rowTotals = table.map(row => row.reduce((a,b)=>a+b,0));
+    const colTotals = opts.map((_,j) => table.reduce((s,row)=>s+row[j],0));
+    const N = rowTotals.reduce((a,b)=>a+b,0);
+
+    if(N < 5){ html += `<span class="nosig">${label}: n insuficiente (${N})</span>
+
+`; return; }
+
+    let chi2 = 0, minExpected = Infinity;
+    table.forEach((row,i) => row.forEach((obs,j) => {
+      const exp = rowTotals[i]*colTotals[j]/N;
+      minExpected = Math.min(minExpected, exp);
+      if(exp > 0) chi2 += (obs-exp)**2/exp;
+    }));
+
+    const validRows = rowTotals.filter(x=>x>0).length;
+    const validCols = colTotals.filter(x=>x>0).length;
+    const df = (validRows-1)*(validCols-1);
+    const p = df > 0 ? chiSqPValue(chi2, df) : 1;
+
+    html += `<span class="label">${label}</span>
+`;
+    html += `  χ² = <span class="val">${chi2.toFixed(3)}</span>   df = <span class="val">${df}</span>   ${pLabel(p)}
+`;
+    if(minExpected < 5) html += `  <span class="nosig">⚠ Freq. esperada mínima = ${minExpected.toFixed(1)} (< 5 — interpretar com cautela)</span>
+`;
+    html += '
+';
+  });
+
+  html += `<span class="note">* p &lt; 0.05  ** p &lt; 0.01  *** p &lt; 0.001  ns = não significativo</span>`;
+  showResult('res-chi', html);
+}
+
+// ── 3. SPEARMAN ───────────────────────────────────────────────
+function runSpearman(){
+  const data = filteredResponses();
+  const vars = [
+    {qid:'q6',  label:'Risco Q6'},
+    {qid:'q13', label:'Custo Q13'},
+    {qid:'q18', label:'Reg. Q18'},
+    {qid:'q24', label:'Lic.Soc Q24'},
+    {qid:'q26', label:'Matur. Q26'},
+  ];
+
+  // Paired observations (only rows with all 5 values present)
+  const complete = data.filter(r => vars.every(v => r.answers[v.qid]?.value !== undefined));
+  const n = complete.length;
+
+  let html = `<span class="label">Matriz de Correlação ρ de Spearman</span>
+`;
+  html += `<span class="note">n = ${n} respostas com todas as 5 variáveis preenchidas  |  valores em bold: |ρ| ≥ 0.30</span>
+
+`;
+
+  if(n < 5){ html += `<span class="nosig">n insuficiente para calcular correlações (mínimo 5).</span>`; showResult('res-spearman',html); return; }
+
+  const vals = vars.map(v => complete.map(r => Number(r.answers[v.qid].value)));
+
+  // Header
+  const pad = 12;
+  html += ' '.repeat(12);
+  vars.forEach(v => { html += v.label.slice(0,pad).padStart(pad); });
+  html += '
+' + '─'.repeat(12 + pad*vars.length) + '
+';
+
+  vars.forEach((v,i) => {
+    html += v.label.padEnd(12);
+    vars.forEach((_,j) => {
+      const rho = i===j ? 1 : spearman(vals[i], vals[j]);
+      const t = rho * Math.sqrt((n-2)/(1-rho*rho));
+      const p = i===j ? 0 : pFromT(Math.abs(t), n-2);
+      const strong = Math.abs(rho) >= 0.3 && i!==j;
+      const cell = isNaN(rho) ? '  — ' : (rho>=0?'+':'')+rho.toFixed(2);
+      const sigMark = (!isNaN(rho)&&i!==j) ? (p<0.001?'***':p<0.01?'** ':p<0.05?'*  ':'   ') : '   ';
+      const styled = i===j ? `<span class="note">${cell}</span>` :
+                     strong ? `<span class="sig">${cell}${sigMark}</span>` :
+                               `<span class="nosig">${cell}${sigMark}</span>`;
+      html += styled.padStart(pad+(styled.length-cell.length-sigMark.length));
+    });
+    html += '
+';
+  });
+
+  html += `
+<span class="note">Verde/bold: |ρ| ≥ 0.30  |  * p&lt;0.05  ** p&lt;0.01  *** p&lt;0.001</span>`;
+  showResult('res-spearman', html);
+}
+
+// ── 4. K-MEANS ────────────────────────────────────────────────
+function runKMeans(){
+  const data = filteredResponses();
+  const qids = ['q6','q13','q18','q24','q26'];
+  const labels = ['Risco','Custo','Regulação','Lic.Social','Maturidade'];
+  const K = 3;
+
+  const complete = data.filter(r => qids.every(q => r.answers[q]?.value !== undefined));
+  const n = complete.length;
+
+  let html = `<span class="label">K-Means (k=3) sobre variáveis Likert</span>
+`;
+  html += `<span class="note">n = ${n} respostas completas  |  variáveis: ${labels.join(', ')}</span>
+
+`;
+
+  if(n < K*3){ html += `<span class="nosig">n insuficiente para K-Means (mínimo ${K*3} obs.).</span>`; showResult('res-kmeans',html); return; }
+
+  const points = complete.map(r => qids.map(q => Number(r.answers[q].value)));
+
+  // Normaliza 1-5 para 0-1
+  const norm = points.map(p => p.map(v => (v-1)/4));
+
+  // Inicializa centroides com K-Means++ (simplificado: primeiros K distintos)
+  let centroids = [norm[0], norm[Math.floor(n/3)], norm[Math.floor(2*n/3)]];
+  let assignments = new Array(n).fill(0);
+  const MAX_ITER = 100;
+
+  for(let iter=0; iter<MAX_ITER; iter++){
+    // Assign
+    let changed = false;
+    norm.forEach((p,i) => {
+      let best=0, bestD=Infinity;
+      centroids.forEach((c,k) => {
+        const d = p.reduce((s,v,j)=>s+(v-c[j])**2, 0);
+        if(d<bestD){ bestD=d; best=k; }
+      });
+      if(assignments[i]!==best){ assignments[i]=best; changed=true; }
+    });
+    if(!changed) break;
+
+    // Update centroids
+    centroids = Array.from({length:K}, (_,k) => {
+      const members = norm.filter((_,i)=>assignments[i]===k);
+      if(!members.length) return centroids[k];
+      return qids.map((_,j) => mean(members.map(p=>p[j])));
+    });
+  }
+
+  // Build cluster stats (back to 1-5 scale)
+  const clusterNames = ['Baixa Maturidade','Maturidade Intermediária','Alta Maturidade'];
+  const clusterStats = Array.from({length:K}, (_,k) => {
+    const members = complete.filter((_,i)=>assignments[i]===k);
+    const memberNorm = centroids[k];
+    const centroid1to5 = memberNorm.map(v => (v*4+1).toFixed(2));
+    const dominantCountry = ['Brasil','Canadá','Chile','Peru'].reduce((best,c) =>
+      members.filter(r=>r.country===c).length > members.filter(r=>r.country===best).length ? c : best, 'Brasil');
+    const dominantProfile = ['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)'].reduce((best,p) =>
+      members.filter(r=>r.profile===p||getAns(r,'q2')===p).length > members.filter(r=>(r.profile===best||getAns(r,'q2')===best)).length ? p : best, 'Gestor(a) / Executivo(a)');
+    // Sort clusters by mean maturity
+    const avgMat = mean(centroid1to5.map(Number));
+    return { k, n:members.length, centroid: centroid1to5, dominantCountry, dominantProfile: dominantProfile.split(' ')[0], avgMat };
+  }).sort((a,b)=>a.avgMat-b.avgMat);
+
+  clusterStats.forEach((cs,i) => {
+    const name = clusterNames[i];
+    html += `<span class="label">Cluster ${i+1} — ${name} (n=${cs.n}, ${Math.round(cs.n/n*100)}%)</span>
+`;
+    labels.forEach((l,j) => {
+      const bar = '█'.repeat(Math.round(Number(cs.centroid[j])*4));
+      html += `  ${l.padEnd(14)} <span class="val">${cs.centroid[j]}</span>  ${bar}
+`;
+    });
+    html += `  País dominante: <span class="val">${cs.dominantCountry}</span>   Perfil dominante: <span class="val">${cs.dominantProfile}</span>
+
+`;
+  });
+
+  // WSS (within-cluster sum of squares) como indicador de qualidade
+  const wss = assignments.reduce((s,k,i) => {
+    return s + norm[i].reduce((ss,v,j)=>ss+(v-centroids[k][j])**2,0);
+  }, 0);
+  html += `<span class="note">WSS (within-cluster SS) = ${wss.toFixed(3)}  |  Iterações convergidas</span>`;
+  showResult('res-kmeans', html);
+}
+
+// ── 5. ALFA DE CRONBACH ───────────────────────────────────────
+function runCronbach(){
+  const data = filteredResponses();
+
+  const dimensions = [
+    { label:'Vulnerabilidade percebida', qids:['q6','q13'], names:['Risco (Q6)','Impacto Custo (Q13)'] },
+    { label:'Governança climática', qids:['q18','q20_num'], names:['Reg. (Q18)','Govern. (Q20)'] },
+    { label:'Impacto socioambiental', qids:['q24'], names:['Lic.Social (Q24)'] },
+    { label:'Instrumento completo (5 Likert)', qids:['q6','q13','q18','q24','q26'], names:['Q6','Q13','Q18','Q24','Q26'] },
+  ];
+
+  // Converte Q20 categórico para escala 1-5
+  const q20map = {
+    'Totalmente integrado (Conselho, metas de remuneração)':5,
+    'Parcialmente (comitê ou responsável dedicado)':4,
+    'Em processo de integração':3,'Apenas nível operacional':2,'Não integrado':1
+  };
+
+  function getVal(r, qid){
+    if(qid==='q20_num'){
+      const v = getAns(r,'q20'); return v ? (q20map[v]||null) : null;
+    }
+    const v = r.answers[qid]?.value;
+    return v !== undefined ? Number(v) : null;
+  }
+
+  let html = `<span class="label">α de Cronbach por dimensão do instrumento</span>
+`;
+  html += `<span class="note">α ≥ 0.70 = aceitável  |  α ≥ 0.80 = bom  |  α ≥ 0.90 = excelente</span>
+
+`;
+  html += `${'Dimensão'.padEnd(36)} ${'k'.padStart(4)} ${'n'.padStart(6)} ${'α'.padStart(8)}   Avaliação
+`;
+  html += '─'.repeat(72) + '
+';
+
+  dimensions.forEach(({label, qids, names}) => {
+    if(qids.length < 2){ html += `${label.padEnd(36)} <span class="note">— (k < 2)</span>
+`; return; }
+
+    const complete = data.filter(r => qids.every(q => getVal(r,q) !== null));
+    const n = complete.length;
+    if(n < 5){ html += `${label.padEnd(36)} ${'—'.padStart(4)} ${String(n).padStart(6)} ${'—'.padStart(8)}   <span class="nosig">n insuf.</span>
+`; return; }
+
+    const k = qids.length;
+    const matrix = qids.map(q => complete.map(r => getVal(r,q)));
+    const totalScores = complete.map((_,i) => matrix.reduce((s,col)=>s+col[i],0));
+    const varTotal = variance(totalScores);
+    const sumVarItems = matrix.reduce((s,col)=>s+variance(col),0);
+    const alpha = varTotal>0 ? (k/(k-1))*(1 - sumVarItems/varTotal) : 0;
+
+    const eval_ = alpha>=0.9?'<span class="sig">Excelente</span>':alpha>=0.8?'<span class="sig">Bom</span>':alpha>=0.7?'<span class="sig">Aceitável</span>':alpha>=0.6?'<span class="nosig">Questionável</span>':'<span class="nosig">Insatisfatório</span>';
+    html += `${label.padEnd(36)} <span class="val">${String(k).padStart(4)}</span> <span class="val">${String(n).padStart(6)}</span> <span class="val">${alpha.toFixed(3).padStart(8)}</span>   ${eval_}
+`;
+  });
+
+  html += `
+<span class="note">k = número de itens  |  Método: variância dos escores totais vs. soma das variâncias dos itens</span>`;
+  showResult('res-cronbach', html);
+}
+
+// ── 6. ESTATÍSTICAS DESCRITIVAS ───────────────────────────────
+function runDescriptive(){
+  const data = filteredResponses();
+  const vars = [
+    {qid:'q6',  label:'Risco climático (Q6)'},
+    {qid:'q13', label:'Impacto em custos (Q13)'},
+    {qid:'q18', label:'Avaliação regulatória (Q18)'},
+    {qid:'q24', label:'Licença social (Q24)'},
+    {qid:'q26', label:'Maturidade (Q26)'},
+  ];
+
+  let html = `<span class="label">Estatísticas Descritivas — Escalas Likert 1–5</span>
+`;
+  html += `<span class="note">N total = ${data.length}  |  n válido = por variável</span>
+
+`;
+  html += `${'Variável'.padEnd(30)} ${'n'.padStart(5)} ${'Mín'.padStart(5)} ${'Máx'.padStart(5)} ${'Média'.padStart(8)} ${'Mediana'.padStart(9)} ${'DP'.padStart(7)}
+`;
+  html += '─'.repeat(72) + '
+';
+
+  vars.forEach(({qid, label}) => {
+    const vals = getLikertVals(data, qid);
+    if(!vals.length){ html += `${label.padEnd(30)} ${'—'.padStart(5)}
+`; return; }
+    const m = mean(vals), med = median(vals), s = std(vals);
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    html += `${label.padEnd(30)} <span class="val">${String(vals.length).padStart(5)}</span> <span class="val">${String(mn).padStart(5)}</span> <span class="val">${String(mx).padStart(5)}</span> <span class="val">${m.toFixed(2).padStart(8)}</span> <span class="val">${med.toFixed(1).padStart(9)}</span> <span class="val">${s.toFixed(2).padStart(7)}</span>
+`;
+  });
+
+  // Quartis para Q6
+  const q6vals = getLikertVals(data,'q6').sort((a,b)=>a-b);
+  if(q6vals.length>=4){
+    const q1=q6vals[Math.floor(q6vals.length*0.25)], q3=q6vals[Math.floor(q6vals.length*0.75)];
+    html += `
+<span class="note">Q6 — Q1=${q1}  Q3=${q3}  IQR=${q3-q1}  (risco: quartis inferior/superior)</span>`;
+  }
+  showResult('res-desc', html);
 }
 
 // ══════════════════════════════════════════════════════════════
