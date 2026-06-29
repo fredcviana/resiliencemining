@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mining Climate Resilience Survey</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --copper:#B87333;--copper-light:#D4956A;--copper-dark:#8B5A1E;
+    --slate:#1E2A3A;--slate-mid:#2D3F52;
+    --sand:#F5F0E8;--sand-dark:#E8DFD0;
+    --text:#1A1A1A;--text-mid:#4A4A4A;--text-light:#7A7A7A;
+    --white:#FFFFFF;--error:#C0392B;--radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:#F0EDE8;color:var(--text);min-height:100vh;}
+
+  /* LANG SCREEN */
+  #lang-screen{min-height:100vh;background:linear-gradient(145deg,var(--slate),var(--slate-mid),#1A3340);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;position:relative;overflow:hidden;}
+  #lang-screen::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;border:1px solid rgba(184,115,51,.15);top:-200px;right:-200px;pointer-events:none;}
+  #lang-screen::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;border:1px solid rgba(184,115,51,.1);bottom:-100px;left:-100px;pointer-events:none;}
+  .lang-logo{display:flex;align-items:center;gap:12px;margin-bottom:3rem;}
+  .lang-logo-icon{width:48px;height:48px;background:var(--copper);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .lang-logo-text{font-family:'Space Grotesk',sans-serif;color:var(--white);font-size:13px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;opacity:.7;}
+  .lang-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3rem;max-width:520px;width:100%;text-align:center;backdrop-filter:blur(10px);position:relative;z-index:1;}
+  .lang-title{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--white);line-height:1.2;margin-bottom:.5rem;}
+  .lang-title span{color:var(--copper-light);}
+  .lang-subtitle{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:2.5rem;line-height:1.6;}
+  .lang-divider{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;}
+  .lang-divider span{color:rgba(255,255,255,.3);font-size:11px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+  .lang-divider::before,.lang-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
+  .lang-btns{display:flex;flex-direction:column;gap:10px;}
+  .lang-btn{padding:14px 24px;border-radius:var(--radius);border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:var(--white);font-family:'Inter',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between;}
+  .lang-btn:hover{background:var(--copper);border-color:var(--copper);transform:translateX(4px);}
+  .lang-btn .flag{font-size:22px;}
+  .lang-btn .lang-name{flex:1;text-align:left;margin-left:12px;}
+  .lang-btn .arrow{opacity:.5;font-size:18px;}
+  .lang-meta{margin-top:2rem;display:flex;justify-content:center;gap:2rem;color:rgba(255,255,255,.35);font-size:11px;letter-spacing:.05em;}
+
+  /* SURVEY SCREEN */
+  #survey-screen{display:none;}
+  .survey-header{background:var(--slate);position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3);}
+  .header-top{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;}
+  .header-brand{font-family:'Space Grotesk',sans-serif;color:var(--white);font-size:13px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;opacity:.7;display:flex;align-items:center;gap:8px;}
+  .header-brand::before{content:'';width:8px;height:8px;background:var(--copper);border-radius:50%;}
+  .progress-label{font-size:12px;color:rgba(255,255,255,.5);font-weight:500;}
+  .progress-bar-wrap{height:3px;background:rgba(255,255,255,.1);}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--copper-dark),var(--copper-light));transition:width .4s ease;width:0%;}
+  .block-nav{background:var(--slate-mid);padding:0 24px;display:flex;gap:0;overflow-x:auto;scrollbar-width:none;}
+  .block-nav::-webkit-scrollbar{display:none;}
+  .block-tab{padding:10px 16px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;user-select:none;}
+  .block-tab.active{color:var(--copper-light);border-bottom-color:var(--copper);}
+  .block-tab.done{color:rgba(255,255,255,.6);}
+  .block-tab.done::after{content:' ✓';color:var(--copper-light);}
+
+  .survey-main{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 6rem;}
+  .block-header{margin-bottom:2rem;}
+  .block-eyebrow{font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--copper);margin-bottom:6px;}
+  .block-title{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:var(--slate);margin-bottom:6px;}
+  .block-desc{font-size:14px;color:var(--text-mid);line-height:1.6;}
+
+  .q-card{background:var(--white);border-radius:var(--radius);padding:1.5rem;margin-bottom:1rem;border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(0,0,0,.04);transition:border-color .2s;}
+  .q-card:focus-within{border-color:var(--copper);}
+  .q-card.required-error{border-color:var(--error);}
+  .q-label{display:flex;gap:10px;margin-bottom:1rem;}
+  .q-num{flex-shrink:0;width:26px;height:26px;background:var(--slate);color:var(--white);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;}
+  .q-text{font-size:15px;font-weight:500;color:var(--text);line-height:1.5;flex:1;}
+  .q-text small{display:block;font-size:12px;font-weight:400;color:var(--text-light);margin-top:4px;}
+
+  /* OPTIONS — checkbox/radio sem bug de duplo-clique */
+  .options{display:flex;flex-direction:column;gap:6px;}
+  .opt-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid rgba(0,0,0,.08);border-radius:8px;cursor:pointer;transition:all .15s;font-size:14px;color:var(--text-mid);line-height:1.4;user-select:none;}
+  .opt-item:hover{border-color:var(--copper-light);background:#FDF8F4;}
+  .opt-item.selected{border-color:var(--copper);background:#FDF5EC;color:var(--text);font-weight:500;}
+  .opt-check{flex-shrink:0;width:18px;height:18px;border:2px solid #CCC;border-radius:50%;margin-top:1px;transition:all .15s;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .opt-item.selected .opt-check{background:var(--copper);border-color:var(--copper);}
+  .opt-item.selected .opt-check::after{content:'';width:6px;height:6px;background:white;border-radius:50%;}
+  .opt-item.multi .opt-check{border-radius:4px;}
+  .opt-item.multi.selected .opt-check::after{content:'✓';font-size:11px;width:auto;height:auto;background:none;border-radius:0;}
+
+  /* LIKERT */
+  .likert-wrap{display:flex;gap:6px;flex-wrap:wrap;}
+  .likert-btn{flex:1;min-width:44px;padding:10px 6px;border:1.5px solid rgba(0,0,0,.1);border-radius:8px;background:var(--white);cursor:pointer;text-align:center;font-size:18px;font-weight:700;color:var(--text-light);transition:all .15s;font-family:'Space Grotesk',sans-serif;}
+  .likert-btn:hover{border-color:var(--copper-light);}
+  .likert-btn.selected{background:var(--copper);border-color:var(--copper);color:white;transform:translateY(-2px);box-shadow:0 4px 12px rgba(184,115,51,.3);}
+  .likert-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-light);font-style:italic;}
+
+  /* MATRIX */
+  .matrix-wrap{overflow-x:auto;}
+  .matrix-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .matrix-table th{background:var(--slate);color:white;padding:8px 10px;text-align:center;font-weight:600;font-size:12px;}
+  .matrix-table th:first-child{text-align:left;border-radius:6px 0 0 0;}
+  .matrix-table th:last-child{border-radius:0 6px 0 0;}
+  .matrix-table td{padding:10px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:middle;}
+  .matrix-table td:first-child{font-size:13px;color:var(--text-mid);max-width:280px;line-height:1.4;}
+  .matrix-table tr:nth-child(even) td{background:#FAFAFA;}
+  .matrix-table tr:hover td{background:#FDF5EC;}
+  .matrix-radio{display:flex;align-items:center;justify-content:center;}
+  .matrix-dot{width:22px;height:22px;border:2px solid #CCC;border-radius:50%;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+  .matrix-dot.selected{background:var(--copper);border-color:var(--copper);}
+  .matrix-dot.selected::after{content:'';width:8px;height:8px;background:white;border-radius:50%;}
+
+  /* TEXTAREA */
+  .q-textarea{width:100%;padding:12px;border:1.5px solid rgba(0,0,0,.1);border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);resize:vertical;min-height:100px;transition:border-color .2s;background:#FAFAFA;}
+  .q-textarea:focus{outline:none;border-color:var(--copper);background:white;}
+
+  /* NAV */
+  .survey-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid rgba(0,0,0,.08);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:90;box-shadow:0 -4px 20px rgba(0,0,0,.08);}
+  .nav-info{font-size:13px;color:var(--text-light);}
+  .nav-btns{display:flex;gap:8px;}
+  .btn{padding:10px 22px;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;border:none;}
+  .btn-ghost{background:transparent;color:var(--text-mid);border:1.5px solid rgba(0,0,0,.12);}
+  .btn-ghost:hover{background:var(--sand-dark);}
+  .btn-primary{background:var(--copper);color:white;}
+  .btn-primary:hover{background:var(--copper-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(184,115,51,.3);}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+  /* DONE */
+  #done-screen{display:none;min-height:100vh;background:linear-gradient(145deg,#1E2A3A,#2D3F52);align-items:center;justify-content:center;flex-direction:column;padding:2rem;text-align:center;}
+  .done-icon{width:80px;height:80px;background:rgba(184,115,51,.2);border:2px solid var(--copper);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 2rem;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(184,115,51,.3);}50%{box-shadow:0 0 0 12px rgba(184,115,51,0);}}
+  .done-title{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:white;margin-bottom:1rem;}
+  .done-subtitle{color:rgba(255,255,255,.6);font-size:15px;line-height:1.7;max-width:440px;margin:0 auto 2rem;}
+
+  .error-msg{font-size:12px;color:var(--error);margin-top:8px;display:none;}
+  .q-card.required-error .error-msg{display:block;}
+
+  /* SAVE STATUS */
+  .save-status{position:fixed;top:60px;right:16px;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;z-index:200;transition:all .3s;opacity:0;pointer-events:none;}
+  .save-status.show{opacity:1;}
+  .save-status.saving{background:#FFF3CD;color:#856404;}
+  .save-status.saved{background:#D1FAE5;color:#065F46;}
+  .save-status.error{background:#FEE2E2;color:#991B1B;}
+
+  @media(max-width:600px){
+    .lang-card{padding:2rem 1.5rem;}
+    .lang-title{font-size:1.5rem;}
+    .survey-main{padding:1.5rem 1rem 6rem;}
+    .block-title{font-size:1.2rem;}
+    .likert-btn{font-size:15px;padding:8px 4px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ CONFIGURAÇÃO SUPABASE ══════════════════════════════════
+     Substitua os valores abaixo pelos do seu projeto Supabase:
+     Project Settings → API → Project URL e anon public key
+════════════════════════════════════════════════════════════ -->
+<script>
+const SUPABASE_URL  = 'https://ddmaajvjplvwaksviflc.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbWFhanZqcGx2d2Frc3ZpZmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg0MjgsImV4cCI6MjA5ODI4NDQyOH0.KrchCk9uxbD5Qh-NpstKC7bqlm-KXS1_y-dJCNZPv7c';
+</script>
+
+<!-- SAVE STATUS INDICATOR -->
+<div class="save-status" id="save-status"></div>
+
+<!-- ════ TELA DE IDIOMA ════════════════════════════════════════ -->
+<div id="lang-screen">
+  <div class="lang-logo">
+    <div class="lang-logo-icon">⛏</div>
+    <div class="lang-logo-text">Research Protocol · Mining &amp; Climate</div>
+  </div>
+  <div class="lang-card">
+    <div class="lang-title">Mining Climate<br><span>Resilience Survey</span></div>
+    <p class="lang-subtitle">Select your language to begin · Selecione seu idioma · Seleccione su idioma</p>
+    <div class="lang-divider"><span>Choose language</span></div>
+    <div class="lang-btns">
+      <button class="lang-btn" onclick="startSurvey('pt')"><span class="flag">🇧🇷</span><span class="lang-name">Português — Brasil</span><span class="arrow">→</span></button>
+      <button class="lang-btn" onclick="startSurvey('en')"><span class="flag">🇨🇦</span><span class="lang-name">English — Canada</span><span class="arrow">→</span></button>
+      <button class="lang-btn" onclick="startSurvey('es')"><span class="flag">🇨🇱🇵🇪</span><span class="lang-name">Español — Chile / Perú</span><span class="arrow">→</span></button>
+    </div>
+    <div class="lang-meta"><span>18–25 min</span><span>Anonymous &amp; Confidential</span></div>
+  </div>
+</div>
+
+<!-- ════ TELA DO SURVEY ════════════════════════════════════════ -->
+<div id="survey-screen">
+  <div class="survey-header">
+    <div class="header-top">
+      <div class="header-brand" id="header-brand">Mining Climate Resilience Survey</div>
+      <div><span class="progress-label" id="progress-label"></span></div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+    <div class="block-nav" id="block-nav"></div>
+  </div>
+  <div class="survey-main" id="survey-main"></div>
+  <div class="survey-nav">
+    <div class="nav-info" id="nav-info"></div>
+    <div class="nav-btns">
+      <button class="btn btn-ghost" id="btn-prev" onclick="prevBlock()">← Back</button>
+      <button class="btn btn-primary" id="btn-next" onclick="nextBlock()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ TELA DE CONCLUSÃO ════════════════════════════════════ -->
+<div id="done-screen">
+  <div class="done-icon">✓</div>
+  <div class="done-title" id="done-title">Thank you!</div>
+  <p class="done-subtitle" id="done-subtitle">Your responses have been recorded and saved to our research database.</p>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// SUPABASE CLIENT (sem dependência externa — fetch puro)
+// ══════════════════════════════════════════════════════════════
+async function sbInsert(table, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON,
+      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+  return r.json();
+}
+
+async function sbUpdate(table, id, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?response_id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON,
+      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRANSLATIONS
+// ══════════════════════════════════════════════════════════════
+const T = {
+  pt:{
+    brandName:"Pesquisa — Mineração & Clima",blockLabel:"Bloco",of:"de",
+    next:"Próximo →",prev:"← Anterior",submit:"Enviar Respostas ✓",submitting:"Enviando...",
+    required:"Esta pergunta é obrigatória.",
+    navInfo:(a,t)=>`${a} de ${t} perguntas respondidas`,
+    doneTitle:"Obrigado!",doneSubtitle:"Suas respostas foram salvas com sucesso no banco de dados da pesquisa.",
+    blocks:[
+      {eyebrow:"Bloco 0",title:"Caracterização",desc:"Perfil do respondente e da organização"},
+      {eyebrow:"Bloco 1",title:"Vulnerabilidades Climáticas",desc:"Riscos físicos e de transição"},
+      {eyebrow:"Bloco 2",title:"Estratégias Adaptativas",desc:"Medidas implementadas e em planejamento"},
+      {eyebrow:"Bloco 3",title:"Gestão Operacional",desc:"Água, energia, logística e tecnologia"},
+      {eyebrow:"Bloco 4",title:"Governança e Regulação",desc:"Políticas, compliance e engajamento institucional"},
+      {eyebrow:"Bloco 5",title:"Dimensão Socioambiental",desc:"Comunidades, licença social e biodiversidade"},
+      {eyebrow:"Bloco 6",title:"Maturidade e Prospecção",desc:"Autoavaliação, prioridades e cooperação"},
+    ],
+    scaleLabels:{
+      risk:["Nenhum risco","Risco crítico"],adequacy:["Muito inadequado","Muito adequado"],
+      maturity:["Muito abaixo","Líder setorial"],impact:["Nenhum impacto","Impacto muito alto"],
+    }
+  },
+  en:{
+    brandName:"Survey — Mining & Climate",blockLabel:"Block",of:"of",
+    next:"Next →",prev:"← Back",submit:"Submit Responses ✓",submitting:"Saving...",
+    required:"This question is required.",
+    navInfo:(a,t)=>`${a} of ${t} questions answered`,
+    doneTitle:"Thank you!",doneSubtitle:"Your responses have been successfully saved to our research database.",
+    blocks:[
+      {eyebrow:"Block 0",title:"Respondent Profile",desc:"Respondent and organization characteristics"},
+      {eyebrow:"Block 1",title:"Climate Vulnerabilities",desc:"Physical and transition risks"},
+      {eyebrow:"Block 2",title:"Adaptive Strategies",desc:"Implemented and planned measures"},
+      {eyebrow:"Block 3",title:"Operational Management",desc:"Water, energy, logistics and technology"},
+      {eyebrow:"Block 4",title:"Governance & Regulation",desc:"Policies, compliance and institutional engagement"},
+      {eyebrow:"Block 5",title:"Socio-environmental Dimension",desc:"Communities, social licence and biodiversity"},
+      {eyebrow:"Block 6",title:"Maturity & Foresight",desc:"Self-assessment, priorities and cooperation"},
+    ],
+    scaleLabels:{
+      risk:["No risk","Critical risk"],adequacy:["Very inadequate","Very adequate"],
+      maturity:["Far below average","Sector leader"],impact:["No impact","Very high impact"],
+    }
+  },
+  es:{
+    brandName:"Encuesta — Minería & Clima",blockLabel:"Bloque",of:"de",
+    next:"Siguiente →",prev:"← Anterior",submit:"Enviar Respuestas ✓",submitting:"Guardando...",
+    required:"Esta pregunta es obligatoria.",
+    navInfo:(a,t)=>`${a} de ${t} preguntas respondidas`,
+    doneTitle:"¡Gracias!",doneSubtitle:"Sus respuestas han sido guardadas exitosamente en nuestra base de datos de investigación.",
+    blocks:[
+      {eyebrow:"Bloque 0",title:"Caracterización",desc:"Perfil del respondente y de la organización"},
+      {eyebrow:"Bloque 1",title:"Vulnerabilidades Climáticas",desc:"Riesgos físicos y de transición"},
+      {eyebrow:"Bloque 2",title:"Estrategias Adaptativas",desc:"Medidas implementadas y en planificación"},
+      {eyebrow:"Bloque 3",title:"Gestión Operacional",desc:"Agua, energía, logística y tecnología"},
+      {eyebrow:"Bloque 4",title:"Gobernanza y Regulación",desc:"Políticas, cumplimiento y compromiso institucional"},
+      {eyebrow:"Bloque 5",title:"Dimensión Socioambiental",desc:"Comunidades, licencia social y biodiversidad"},
+      {eyebrow:"Bloque 6",title:"Madurez y Prospección",desc:"Autoevaluación, prioridades y cooperación"},
+    ],
+    scaleLabels:{
+      risk:["Sin riesgo","Riesgo crítico"],adequacy:["Muy inadecuado","Muy adecuado"],
+      maturity:["Muy por debajo","Líder sectorial"],impact:["Sin impacto","Impacto muy alto"],
+    }
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// PERGUNTAS (trilíngue)
+// ══════════════════════════════════════════════════════════════
+function getQuestions(lang){
+  const q={
+    pt:[
+      {id:'q1',block:0,type:'radio',required:true,text:'País de atuação principal',options:['Brasil','Canadá','Chile','Peru']},
+      {id:'q2',block:0,type:'radio',required:true,text:'Perfil do respondente',options:['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)','Outro']},
+      {id:'q3',block:0,type:'radio',required:true,text:'Porte da organização',options:['Micro/Pequeno (<100 func.)','Médio (100–999 func.)','Grande (1.000–9.999 func.)','Multinacional (≥10.000 func.)']},
+      {id:'q4',block:0,type:'checkbox',required:true,text:'Tipo de mineral(is) predominante(s) extraído(s) ou regulado(s)',options:['Minerais críticos para transição energética (lítio, cobre, cobalto, níquel)','Minerais ferrosos (ferro, manganês)','Ouro e metais preciosos','Minerais industriais (fosfato, potássio, caulim)','Carvão mineral','Outro']},
+      {id:'q5',block:0,type:'radio',required:true,text:'Há quanto tempo sua organização atua no setor?',options:['Menos de 5 anos','5 a 15 anos','16 a 30 anos','Mais de 30 anos']},
+      {id:'q6',block:1,type:'likert5',required:true,text:'Nível de risco climático para as operações no horizonte de 10 anos',scaleKey:'risk'},
+      {id:'q7',block:1,type:'checkbox',required:true,text:'Riscos climáticos físicos que já impactaram ou têm potencial de impactar a operação',options:['Escassez hídrica / seca prolongada','Inundações e enxurradas','Deslizamentos e instabilidade de terreno','Aumento de temperatura / ondas de calor','Tempestades e eventos meteorológicos extremos','Incêndios florestais próximos às operações','Degradação de permafrost (Canadá)','Nenhum dos acima']},
+      {id:'q8',block:1,type:'checkbox',required:true,text:'Riscos de transição climática mais relevantes',options:['Regulação de carbono / precificação','Mudanças nas exigências de licenciamento','Pressão de investidores por ESG/clima','Mudanças na demanda por minerais','Litígio climático','Pressão de comunidades e ONGs','Nenhum dos acima']},
+      {id:'q9',block:1,type:'radio',required:true,text:'Análise formal de risco climático realizada (TCFD, cenários)?',options:['Sim, completa e publicada','Sim, interna não publicada','Em desenvolvimento','Não, mas há planos','Não e sem planos']},
+      {id:'q10',block:2,type:'radio',required:true,text:'Estratégia formal de adaptação climática',options:['Sim, aprovada e implementada','Sim, aprovada em fase inicial','Em desenvolvimento','Adaptações informais pontuais','Não há estratégia']},
+      {id:'q11',block:2,type:'matrix',required:false,text:'Nível de implementação das estratégias adaptativas (1 = Não implementado → 5 = Totalmente implementado)',rows:['Reciclagem e reuso de água','Eficiência energética / renováveis','Atualização de infraestrutura resiliente','Gestão de riscos climáticos (ERM)','Monitoramento climático contínuo','Planos de contingência a desastres','Engajamento comunitário adaptativo','Inovação tecnológica para resiliência'],cols:['1','2','3','4','5']},
+      {id:'q12',block:2,type:'radio',required:true,text:'Principal barreira à adaptação climática',options:['Falta de recursos financeiros','Falta de dados climáticos locais','Ausência de expertise técnica','Falta de prioridade institucional','Incerteza regulatória','Pressão por resultados de curto prazo','Outro']},
+      {id:'q13',block:2,type:'likert5',required:true,text:'Impacto das mudanças climáticas nos custos operacionais',scaleKey:'impact'},
+      {id:'q14',block:3,type:'checkbox',required:true,text:'Práticas de gestão do risco de disponibilidade hídrica',options:['Recirculação e reuso de água','Captação de fontes alternativas','Monitoramento de bacias hidrográficas','Acordos com comunidades sobre uso da água','Barragens e reservatórios próprios','Não há gestão específica']},
+      {id:'q15',block:3,type:'radio',required:true,text:'Percentual estimado de energia renovável na matriz das operações',options:['0% (totalmente convencional)','1% a 20%','21% a 50%','51% a 80%','Mais de 80%']},
+      {id:'q16',block:3,type:'radio',required:true,text:'Uso de tecnologias de monitoramento ambiental em tempo real',options:['Sim, sistema abrangente integrado','Sim, de forma parcial','Em fase de implementação','Não, mas há interesse','Não há interesse']},
+      {id:'q17',block:3,type:'radio',required:true,text:'As mudanças climáticas já alteraram o planejamento logístico?',options:['Sim, mudanças estruturais na logística','Sim, ajustes pontuais','Ainda não, mas antecipamos mudanças','Não e não antecipamos']},
+      {id:'q18',block:4,type:'likert5',required:true,text:'Avaliação do arcabouço regulatório do país sobre adaptação climática na mineração',scaleKey:'adequacy'},
+      {id:'q19',block:4,type:'checkbox',required:true,text:'Participação em iniciativas coletivas sobre adaptação climática',options:['Associações setoriais (IBRAM, MAC, SONAMI, SNMPE)','Iniciativas internacionais (ICMM, CDP, TCFD)','Grupos de trabalho governamentais','Parcerias com universidades / centros de pesquisa','Não participa de nenhuma iniciativa']},
+      {id:'q20',block:4,type:'radio',required:true,text:'Integração do tema climático à governança corporativa',options:['Totalmente integrado (Conselho, metas de remuneração)','Parcialmente (comitê ou responsável dedicado)','Em processo de integração','Apenas nível operacional','Não integrado']},
+      {id:'q21',block:4,type:'checkbox',required:false,text:'Frameworks de reporte de sustentabilidade/clima utilizados',options:['GRI','TCFD','SASB','ISSB / IFRS S2','Relatório próprio sem framework','Não divulga relatórios']},
+      {id:'q22',block:5,type:'radio',required:true,text:'As mudanças climáticas geraram ou intensificaram conflitos com comunidades?',options:['Sim, conflitos diretos relacionados ao clima','Sim, conflitos indiretos agravados','Não, mas o risco é monitorado','Não e sem percepção de risco']},
+      {id:'q23',block:5,type:'radio',required:true,text:'Inclusão de comunidades no planejamento de adaptação climática',options:['Sim, processos formais de consulta','Sim, de forma informal e pontual','Em desenvolvimento','Não, mas há interesse','Não há planos']},
+      {id:'q24',block:5,type:'likert5',required:true,text:'Impacto das mudanças climáticas sobre a licença social para operar',scaleKey:'impact'},
+      {id:'q25',block:5,type:'radio',required:true,text:'Programas para populações vulneráveis em contexto climático',options:['Sim, programas formais em andamento','Sim, iniciativas pontuais','Em desenvolvimento','Não há programas específicos']},
+      {id:'q26',block:6,type:'likert5',required:true,text:'Nível geral de maturidade em resiliência climática comparado ao setor',scaleKey:'maturity'},
+      {id:'q27',block:6,type:'checkbox',required:true,note:'Selecione até 3',max:3,text:'Ações prioritárias para o setor nos próximos 5 anos (máx. 3)',options:['Investimento em P&D e inovação','Fortalecimento do marco regulatório','Mecanismos de financiamento climático','Formação e capacitação profissional','Maior transparência de riscos climáticos','Cooperação internacional entre países mineradores','Engajamento profundo com comunidades','Outro']},
+      {id:'q28',block:6,type:'radio',required:true,text:'Interesse em redes de cooperação técnica entre Brasil, Canadá, Chile e Peru',options:['Sim, muito interesse','Sim, interesse moderado','Talvez, depende do formato','Pouco interesse','Nenhum interesse']},
+      {id:'q29',block:6,type:'textarea',required:false,text:'Comentários adicionais, experiências relevantes ou sugestões para a pesquisa'},
+    ],
+    en:[
+      {id:'q1',block:0,type:'radio',required:true,text:'Primary country of operation',options:['Brazil','Canada','Chile','Peru']},
+      {id:'q2',block:0,type:'radio',required:true,text:'Respondent profile',options:['Manager / Executive (C-level, Director)','Technical / Operations Engineer','ESG / Sustainability Professional','Regulator / Public Official','Other']},
+      {id:'q3',block:0,type:'radio',required:true,text:'Organization size',options:['Micro/Small (<100 employees)','Medium (100–999 employees)','Large (1,000–9,999 employees)','Multinational (≥10,000 employees)']},
+      {id:'q4',block:0,type:'checkbox',required:true,text:'Primary mineral(s) extracted or regulated',options:['Critical minerals for energy transition (lithium, copper, cobalt, nickel)','Ferrous minerals (iron, manganese)','Gold and precious metals','Industrial minerals (phosphate, potassium, kaolin)','Coal','Other']},
+      {id:'q5',block:0,type:'radio',required:true,text:'How long has your organization operated in the mining sector?',options:['Less than 5 years','5 to 15 years','16 to 30 years','More than 30 years']},
+      {id:'q6',block:1,type:'likert5',required:true,text:'Climate risk level for operations over a 10-year horizon',scaleKey:'risk'},
+      {id:'q7',block:1,type:'checkbox',required:true,text:'Physical climate risks that have already impacted or may impact operations',options:['Water scarcity / prolonged drought','Flooding and flash floods','Landslides and ground instability','Temperature increase / heat waves','Storms and extreme weather events','Wildfires near operations','Permafrost degradation (Canada)','None of the above']},
+      {id:'q8',block:1,type:'checkbox',required:true,text:'Most relevant climate transition risks',options:['Carbon regulation / carbon pricing','Changes in environmental licensing requirements','Investor pressure on ESG/climate criteria','Changes in mineral demand (energy transition)','Climate litigation','Pressure from communities and NGOs','None of the above']},
+      {id:'q9',block:1,type:'radio',required:true,text:'Formal climate risk analysis (e.g. TCFD, climate scenario analysis)',options:['Yes, complete and published','Yes, internal not published','Under development','No, but planned','No, and no plans']},
+      {id:'q10',block:2,type:'radio',required:true,text:'Formal climate adaptation strategy',options:['Yes, approved and implemented','Yes, approved — early implementation','Under development','Informal ad hoc adaptations only','No strategy at all']},
+      {id:'q11',block:2,type:'matrix',required:false,text:'Implementation level of adaptive strategies (1 = Not implemented → 5 = Fully implemented)',rows:['Water recycling and reuse','Energy efficiency / renewables','Climate-resilient infrastructure upgrade','Climate risk management in ERM','Continuous climate monitoring','Disaster contingency and response plans','Community engagement for shared adaptation','Technology innovation for resilience'],cols:['1','2','3','4','5']},
+      {id:'q12',block:2,type:'radio',required:true,text:'Main barrier to implementing climate adaptation',options:['Lack of financial resources','Lack of reliable local climate data','Absence of internal technical expertise','Lack of institutional mandate / priority','Regulatory uncertainty','Short-term performance pressure','Other']},
+      {id:'q13',block:2,type:'likert5',required:true,text:'Impact of climate change on operational costs',scaleKey:'impact'},
+      {id:'q14',block:3,type:'checkbox',required:true,text:'Water availability risk management practices',options:['Water recirculation and reuse systems','Alternative source capture','Real-time watershed monitoring','Community/government water-use agreements','Own dams and reservoirs','No specific water risk management']},
+      {id:'q15',block:3,type:'radio',required:true,text:'Estimated share of renewable energy in operational energy mix',options:['0% (fully conventional)','1% to 20%','21% to 50%','51% to 80%','Over 80%']},
+      {id:'q16',block:3,type:'radio',required:true,text:'Use of real-time environmental/climate monitoring technologies',options:['Yes, comprehensive system integrated into operations','Yes, partially / in some processes','Under implementation','No, but interested','No interest or perceived need']},
+      {id:'q17',block:3,type:'radio',required:true,text:'Have climate changes already altered operational logistics planning?',options:['Yes, structural changes to logistics','Yes, minor adjustments','Not yet, but anticipate changes','No, and no anticipation of change']},
+      {id:'q18',block:4,type:'likert5',required:true,text:"Assessment of the country's regulatory framework for climate adaptation in mining",scaleKey:'adequacy'},
+      {id:'q19',block:4,type:'checkbox',required:true,text:'Participation in collective climate adaptation initiatives',options:['Sector associations (MAC, IBRAM, SONAMI, SNMPE)','International initiatives (ICMM, CDP, TCFD)','Government working groups','University and research centre partnerships','Does not participate in any collective initiative']},
+      {id:'q20',block:4,type:'radio',required:true,text:'Integration of climate into corporate governance',options:['Fully integrated (Board agenda, pay-linked targets)','Partially (dedicated committee or officer)','In process of integration','Operational level only — no formal governance','Not integrated']},
+      {id:'q21',block:4,type:'checkbox',required:false,text:'Sustainability/climate reporting frameworks used',options:['GRI','TCFD','SASB','ISSB / IFRS S2','Own report without standard framework','Does not publish sustainability/climate reports']},
+      {id:'q22',block:5,type:'radio',required:true,text:'Have climate changes generated or intensified community conflicts?',options:['Yes, direct climate-related conflicts (e.g. water disputes)','Yes, indirect conflicts aggravated by climate factors','No, but the risk is monitored','No, and no social climate risk perceived']},
+      {id:'q23',block:5,type:'radio',required:true,text:'Community inclusion in climate adaptation planning',options:['Yes, formal consultation and participation processes','Yes, informally and on an ad hoc basis','Under development','No, but there is interest','No plans for community inclusion']},
+      {id:'q24',block:5,type:'likert5',required:true,text:"Impact of climate change on the organization's social licence to operate",scaleKey:'impact'},
+      {id:'q25',block:5,type:'radio',required:true,text:'Programs for vulnerable populations in climate context',options:['Yes, formal programmes underway','Yes, ad hoc initiatives','Under development','No specific programmes']},
+      {id:'q26',block:6,type:'likert5',required:true,text:'Overall climate resilience maturity compared to sector peers',scaleKey:'maturity'},
+      {id:'q27',block:6,type:'checkbox',required:true,note:'Select up to 3',max:3,text:'Priority actions for the mining sector in the next 5 years (max. 3)',options:["R&D investment and innovation","Strengthening of regulatory frameworks","Climate finance mechanisms","Professional training and capacity building","Greater climate risk transparency","International cooperation among mining countries","Deeper community engagement","Other"]},
+      {id:'q28',block:6,type:'radio',required:true,text:'Interest in technical cooperation networks among Brazil, Canada, Chile and Peru',options:['Yes, very interested','Yes, moderately interested','Maybe, depends on format','Little interest','No interest']},
+      {id:'q29',block:6,type:'textarea',required:false,text:'Additional comments, relevant experiences, or suggestions for the research'},
+    ],
+    es:[
+      {id:'q1',block:0,type:'radio',required:true,text:'País de operación principal',options:['Brasil','Canadá','Chile','Perú']},
+      {id:'q2',block:0,type:'radio',required:true,text:'Perfil del respondente',options:['Gerente / Ejecutivo(a)','Técnico(a) / Ingeniero(a) de operaciones','Profesional de ESG / Sostenibilidad','Regulador(a) / Agente público(a)','Otro']},
+      {id:'q3',block:0,type:'radio',required:true,text:'Tamaño de la organización',options:['Micro/Pequeño (<100 empleados)','Mediano (100–999 empleados)','Grande (1.000–9.999 empleados)','Multinacional (≥10.000 empleados)']},
+      {id:'q4',block:0,type:'checkbox',required:true,text:'Tipo de mineral(es) predominante(s) extraído(s) o regulado(s)',options:['Minerales críticos para transición energética (litio, cobre, cobalto, níquel)','Minerales ferrosos (hierro, manganeso)','Oro y metales preciosos','Minerales industriales (fosfato, potasio, caolín)','Carbón mineral','Otro']},
+      {id:'q5',block:0,type:'radio',required:true,text:'¿Cuánto tiempo lleva su organización en el sector minero?',options:['Menos de 5 años','5 a 15 años','16 a 30 años','Más de 30 años']},
+      {id:'q6',block:1,type:'likert5',required:true,text:'Nivel de riesgo climático para las operaciones en un horizonte de 10 años',scaleKey:'risk'},
+      {id:'q7',block:1,type:'checkbox',required:true,text:'Riesgos climáticos físicos que ya impactaron o tienen potencial de impactar la operación',options:['Escasez hídrica / sequía prolongada','Inundaciones y avenidas','Deslizamientos e inestabilidad del terreno','Aumento de temperatura / olas de calor','Tormentas y eventos meteorológicos extremos','Incendios forestales','Degradación del permafrost (Canadá)','Ninguno de los anteriores']},
+      {id:'q8',block:1,type:'checkbox',required:true,text:'Riesgos de transición climática más relevantes',options:['Regulación del carbono / precio del carbono','Cambios en requisitos de licencias ambientales','Presión de inversores por criterios ESG/clima','Cambios en la demanda de minerales','Litigios climáticos','Presión de comunidades y ONGs','Ninguno de los anteriores']},
+      {id:'q9',block:1,type:'radio',required:true,text:'Análisis formal de riesgo climático (TCFD, escenarios)',options:['Sí, completo y publicado','Sí, interno no publicado','En desarrollo','No, pero hay planes','No y sin planes']},
+      {id:'q10',block:2,type:'radio',required:true,text:'Estrategia formal de adaptación climática',options:['Sí, aprobada e implementada','Sí, aprobada en fase inicial','En desarrollo','Adaptaciones informales puntuales','Sin estrategia']},
+      {id:'q11',block:2,type:'matrix',required:false,text:'Nivel de implementación de estrategias adaptativas (1 = No implementado → 5 = Totalmente implementado)',rows:['Reciclaje y reúso de agua','Eficiencia energética / renovables','Actualización de infraestructura','Gestión de riesgos climáticos (ERM)','Monitoreo climático continuo','Planes de contingencia ante desastres','Compromiso comunitario adaptativo','Innovación tecnológica para resiliencia'],cols:['1','2','3','4','5']},
+      {id:'q12',block:2,type:'radio',required:true,text:'Principal barrera para la adaptación climática',options:['Falta de recursos financieros','Falta de datos climáticos locales','Ausencia de experiencia técnica interna','Falta de mandato / prioridad institucional','Incertidumbre regulatoria','Presión por resultados de corto plazo','Otro']},
+      {id:'q13',block:2,type:'likert5',required:true,text:'Impacto del cambio climático en los costos operacionales',scaleKey:'impact'},
+      {id:'q14',block:3,type:'checkbox',required:true,text:'Prácticas de gestión del riesgo de disponibilidad hídrica',options:['Sistema de recirculación y reúso de agua','Captación de fuentes alternativas','Monitoreo de cuencas en tiempo real','Acuerdos con comunidades sobre uso del agua','Represas y reservorios propios','Sin gestión específica']},
+      {id:'q15',block:3,type:'radio',required:true,text:'Porcentaje estimado de energía renovable en la matriz operacional',options:['0% (totalmente convencional)','1% a 20%','21% a 50%','51% a 80%','Más del 80%']},
+      {id:'q16',block:3,type:'radio',required:true,text:'Uso de tecnologías de monitoreo ambiental en tiempo real',options:['Sí, sistema integral integrado a operaciones','Sí, de forma parcial','En fase de implementación','No, pero hay interés','Sin interés']},
+      {id:'q17',block:3,type:'radio',required:true,text:'¿El cambio climático ya alteró la planificación logística?',options:['Sí, cambios estructurales en la logística','Sí, ajustes puntuales','Aún no, pero se anticipan cambios','No y sin anticipación de cambios']},
+      {id:'q18',block:4,type:'likert5',required:true,text:'Evaluación del marco regulatorio del país sobre adaptación climática en minería',scaleKey:'adequacy'},
+      {id:'q19',block:4,type:'checkbox',required:true,text:'Participación en iniciativas colectivas de adaptación climática',options:['Asociaciones sectoriales (SONAMI, SNMPE, IBRAM, MAC)','Iniciativas internacionales (ICMM, CDP, TCFD)','Grupos de trabajo gubernamentales','Alianzas con universidades / centros de investigación','No participa en ninguna iniciativa']},
+      {id:'q20',block:4,type:'radio',required:true,text:'Integración del tema climático en la gobernanza corporativa',options:['Totalmente integrado (Directorio, metas de remuneración)','Parcialmente (comité o responsable dedicado)','En proceso de integración','Solo nivel operacional','No integrado']},
+      {id:'q21',block:4,type:'checkbox',required:false,text:'Marcos de reporte de sostenibilidad/clima utilizados',options:['GRI','TCFD','SASB','ISSB / IFRS S2','Informe propio sin marco estándar','No publica informes de sostenibilidad/clima']},
+      {id:'q22',block:5,type:'radio',required:true,text:'¿El cambio climático generó o intensificó conflictos con comunidades?',options:['Sí, conflictos directos relacionados al clima','Sí, conflictos indirectos agravados','No, pero el riesgo se monitorea','No y sin percepción de riesgo']},
+      {id:'q23',block:5,type:'radio',required:true,text:'Inclusión de comunidades en la planificación de adaptación climática',options:['Sí, procesos formales de consulta','Sí, de forma informal y puntual','En desarrollo','No, pero hay interés','Sin planes de inclusión comunitaria']},
+      {id:'q24',block:5,type:'likert5',required:true,text:'Impacto del cambio climático en la licencia social para operar',scaleKey:'impact'},
+      {id:'q25',block:5,type:'radio',required:true,text:'Programas para poblaciones vulnerables en contexto climático',options:['Sí, programas formales en curso','Sí, iniciativas puntuales','En desarrollo','Sin programas específicos']},
+      {id:'q26',block:6,type:'likert5',required:true,text:'Nivel general de madurez en resiliencia climática comparado con el sector',scaleKey:'maturity'},
+      {id:'q27',block:6,type:'checkbox',required:true,note:'Seleccione hasta 3',max:3,text:'Acciones prioritarias para el sector en los próximos 5 años (máx. 3)',options:['Inversión en I+D e innovación','Fortalecimiento del marco regulatorio','Mecanismos de financiamiento climático','Formación y capacitación profesional','Mayor transparencia en riesgos climáticos','Cooperación internacional entre países mineros','Compromiso profundo con comunidades','Otro']},
+      {id:'q28',block:6,type:'radio',required:true,text:'Interés en redes de cooperación técnica entre Brasil, Canadá, Chile y Perú',options:['Sí, mucho interés','Sí, interés moderado','Tal vez, depende del formato','Poco interés','Sin interés']},
+      {id:'q29',block:6,type:'textarea',required:false,text:'Comentarios adicionales, experiencias relevantes o sugerencias para la investigación'},
+    ]
+  };
+  return q[lang];
+}
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let lang='en', currentBlock=0, answers={}, questions=[], t=T.en;
+let responseId=null; // Supabase row id para PATCH incremental
+const NUM_BLOCKS=7;
+
+function startSurvey(l){
+  lang=l; t=T[l]; questions=getQuestions(l);
+  responseId='resp_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  document.getElementById('lang-screen').style.display='none';
+  document.getElementById('survey-screen').style.display='block';
+  document.getElementById('header-brand').textContent=t.brandName;
+  document.getElementById('btn-next').textContent=t.next;
+  document.getElementById('btn-prev').textContent=t.prev;
+  buildBlockNav();
+  renderBlock(0);
+}
+
+function buildBlockNav(){
+  const nav=document.getElementById('block-nav');
+  nav.innerHTML='';
+  t.blocks.forEach((b,i)=>{
+    const tab=document.createElement('div');
+    tab.className='block-tab'+(i===0?' active':'');
+    tab.textContent=b.eyebrow; tab.id='tab-'+i;
+    tab.onclick=()=>goToBlock(i);
+    nav.appendChild(tab);
+  });
+}
+
+function updateBlockNav(){
+  t.blocks.forEach((_,i)=>{
+    const tab=document.getElementById('tab-'+i);
+    if(!tab) return;
+    tab.className='block-tab';
+    if(i===currentBlock) tab.classList.add('active');
+    else if(i<currentBlock) tab.classList.add('done');
+  });
+}
+
+function getBlockQs(b){ return questions.filter(q=>q.block===b); }
+
+function renderBlock(blockIdx){
+  currentBlock=blockIdx;
+  const main=document.getElementById('survey-main');
+  const bq=getBlockQs(blockIdx);
+  const b=t.blocks[blockIdx];
+  const prevCount=questions.filter(q=>q.block<blockIdx).length;
+
+  let html=`<div class="block-header">
+    <div class="block-eyebrow">${b.eyebrow}</div>
+    <div class="block-title">${b.title}</div>
+    <p class="block-desc">${b.desc}</p>
+  </div>`;
+
+  bq.forEach((q,qi)=>{ html+=renderQuestion(q, prevCount+qi+1); });
+  main.innerHTML=html;
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  // Restore saved answers
+  bq.forEach(q=>{
+    const saved=answers[q.id];
+    if(!saved) return;
+    if(q.type==='radio'){
+      document.querySelectorAll(`[data-qid="${q.id}"] .opt-item`).forEach(el=>{
+        if(el.dataset.val===saved.value) el.classList.add('selected');
+      });
+    } else if(q.type==='checkbox'){
+      document.querySelectorAll(`[data-qid="${q.id}"] .opt-item`).forEach(el=>{
+        if(saved.values&&saved.values.includes(el.dataset.val)) el.classList.add('selected');
+      });
+    } else if(q.type==='likert5'){
+      document.querySelectorAll(`[data-qid="${q.id}"] .likert-btn`).forEach(btn=>{
+        if(saved.value==btn.dataset.val) btn.classList.add('selected');
+      });
+    } else if(q.type==='matrix'){
+      if(saved.rows) Object.entries(saved.rows).forEach(([ri,val])=>{
+        document.querySelectorAll(`[data-mrow="${ri}"][data-qid="${q.id}"]`).forEach((dot,ci)=>{
+          if(ci+1==val) dot.classList.add('selected');
+        });
+      });
+    } else if(q.type==='textarea'){
+      const ta=document.querySelector(`[data-qid="${q.id}"] textarea`);
+      if(ta) ta.value=saved.value||'';
+    }
+  });
+
+  updateProgress(); updateBlockNav(); updateNavButtons();
+}
+
+function renderQuestion(q,num){
+  let inner='';
+  if(q.type==='radio'){
+    // FIX: usa div clicável em vez de <label> com <input> — evita duplo-disparo
+    inner=`<div class="options">${q.options.map(o=>
+      `<div class="opt-item" data-val="${o}" tabindex="0"
+           onclick="selectOpt(this,'${q.id}','radio')"
+           onkeydown="if(event.key==='Enter'||event.key===' ')selectOpt(this,'${q.id}','radio')">
+        <span class="opt-check"></span><span>${o}</span>
+       </div>`
+    ).join('')}</div>`;
+  } else if(q.type==='checkbox'){
+    const note=q.max?`<p style="font-size:12px;color:#999;margin-top:8px;">${q.note||''}</p>`:'';
+    inner=`<div class="options">${q.options.map(o=>
+      `<div class="opt-item multi" data-val="${o}" tabindex="0"
+           onclick="selectOpt(this,'${q.id}','checkbox',${q.max||99})"
+           onkeydown="if(event.key==='Enter'||event.key===' ')selectOpt(this,'${q.id}','checkbox',${q.max||99})">
+        <span class="opt-check"></span><span>${o}</span>
+       </div>`
+    ).join('')}</div>${note}`;
+  } else if(q.type==='likert5'){
+    const sl=t.scaleLabels[q.scaleKey]||['',''];
+    inner=`<div class="likert-wrap">
+      ${[1,2,3,4,5].map(n=>`<button class="likert-btn" data-val="${n}" onclick="selectLikert(this,'${q.id}')">${n}</button>`).join('')}
+    </div>
+    <div class="likert-labels"><span>${sl[0]}</span><span>${sl[1]}</span></div>`;
+  } else if(q.type==='matrix'){
+    const colH=q.cols.map(c=>`<th>${c}</th>`).join('');
+    const rowsH=q.rows.map((r,ri)=>`<tr>
+      <td>${r}</td>
+      ${q.cols.map((_,ci)=>`<td><div class="matrix-radio">
+        <div class="matrix-dot" data-qid="${q.id}" data-mrow="${ri}"
+             onclick="selectMatrix(this,'${q.id}',${ri},${ci+1})"></div>
+      </div></td>`).join('')}
+    </tr>`).join('');
+    inner=`<div class="matrix-wrap"><table class="matrix-table">
+      <thead><tr><th style="min-width:200px">${lang==='pt'?'Item':lang==='es'?'Elemento':'Item'}</th>${colH}</tr></thead>
+      <tbody>${rowsH}</tbody>
+    </table></div>`;
+  } else if(q.type==='textarea'){
+    const ph=lang==='pt'?'Digite sua resposta aqui...':lang==='es'?'Escriba su respuesta aquí...':'Type your response here...';
+    inner=`<textarea class="q-textarea" placeholder="${ph}"
+      oninput="saveTextarea('${q.id}',this.value)"></textarea>`;
+  }
+
+  return `<div class="q-card" data-qid="${q.id}" id="card-${q.id}">
+    <div class="q-label">
+      <div class="q-num">${num}</div>
+      <div class="q-text">${q.text}${q.note?`<small>${q.note}</small>`:''}</div>
+    </div>
+    ${inner}
+    <div class="error-msg">${t.required}</div>
+  </div>`;
+}
+
+// ── SELECTION HANDLERS (sem bug de duplo-disparo) ─────────────
+function selectOpt(el,qid,type,max){
+  // el é um div, não um label — sem propagação para input
+  const container=el.closest(`[data-qid="${qid}"]`);
+  if(type==='radio'){
+    container.querySelectorAll('.opt-item').forEach(e=>e.classList.remove('selected'));
+    el.classList.add('selected');
+    answers[qid]={value:el.dataset.val};
+  } else {
+    const already=el.classList.contains('selected');
+    const selCount=container.querySelectorAll('.opt-item.selected').length;
+    if(!already && selCount>=max) return; // limite atingido
+    el.classList.toggle('selected');
+    const vals=Array.from(container.querySelectorAll('.opt-item.selected')).map(e=>e.dataset.val);
+    answers[qid]={values:vals};
+  }
+  container.classList.remove('required-error');
+  updateProgress();
+  autoSave();
+}
+
+function selectLikert(btn,qid){
+  const container=btn.closest(`[data-qid="${qid}"]`);
+  container.querySelectorAll('.likert-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  answers[qid]={value:parseInt(btn.dataset.val)};
+  container.classList.remove('required-error');
+  updateProgress();
+  autoSave();
+}
+
+function selectMatrix(dot,qid,ri,ci){
+  const container=dot.closest(`[data-qid="${qid}"]`);
+  container.querySelectorAll(`[data-mrow="${ri}"]`).forEach(d=>d.classList.remove('selected'));
+  dot.classList.add('selected');
+  if(!answers[qid]) answers[qid]={rows:{}};
+  if(!answers[qid].rows) answers[qid].rows={};
+  answers[qid].rows[ri]=ci;
+  updateProgress();
+  autoSave();
+}
+
+function saveTextarea(qid,val){
+  answers[qid]={value:val};
+  autoSave();
+}
+
+// ── AUTO-SAVE para Supabase ───────────────────────────────────
+let saveTimer=null;
+function autoSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>flushToSupabase(false), 1500);
+}
+
+async function flushToSupabase(isFinal=false){
+  if(!SUPABASE_URL || !SUPABASE_ANON) return;
+  showSaveStatus('saving');
+  try {
+    const payload = {
+      response_id:        responseId,
+      lang,
+      country:            answers.q1?.value || null,
+      respondent_profile: answers.q2?.value || null,
+      org_size:           answers.q3?.value || null,
+      answers:            answers,
+      completed:          isFinal,
+      updated_at:         new Date().toISOString(),
+    };
+    if(isFinal) payload.submitted_at = new Date().toISOString();
+
+    // Upsert nativo do Supabase — POST com on_conflict
+    // Insere se não existe, atualiza se já existe (pela chave response_id)
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/survey_responses?on_conflict=response_id`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Prefer':        'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    if(!res.ok){ const e = await res.text(); throw new Error(e); }
+    showSaveStatus('saved');
+  } catch(e){
+    console.error('Supabase save error:', e);
+    showSaveStatus('error');
+  }
+}
+
+function showSaveStatus(state){
+  const el=document.getElementById('save-status');
+  const msgs={saving:'💾 Salvando...', saved:'✓ Salvo', error:'⚠ Erro ao salvar'};
+  el.textContent=msgs[state];
+  el.className='save-status '+state+' show';
+  if(state==='saved') setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+// ── PROGRESS & NAV ────────────────────────────────────────────
+function updateProgress(){
+  const total=questions.filter(q=>q.required).length;
+  const answered=questions.filter(q=>q.required&&answers[q.id]&&(
+    (answers[q.id].value!==undefined&&answers[q.id].value!=='')||
+    (answers[q.id].values&&answers[q.id].values.length>0)||
+    (answers[q.id].rows&&Object.keys(answers[q.id].rows).length>0)
+  )).length;
+  const pct=Math.round(answered/total*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=`${t.blockLabel} ${currentBlock+1} ${t.of} ${NUM_BLOCKS}`;
+  document.getElementById('nav-info').textContent=t.navInfo(answered,total);
+}
+
+function validateBlock(){
+  const bq=getBlockQs(currentBlock).filter(q=>q.required);
+  let valid=true;
+  bq.forEach(q=>{
+    const card=document.getElementById(`card-${q.id}`);
+    const a=answers[q.id];
+    const ok=a&&(
+      (a.value!==undefined&&a.value!=='')||
+      (a.values&&a.values.length>0)||
+      (a.rows&&Object.keys(a.rows).length>0)
+    );
+    if(!ok){card.classList.add('required-error');valid=false;}
+    else card.classList.remove('required-error');
+  });
+  if(!valid){const f=document.querySelector('.required-error');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});}
+  return valid;
+}
+
+function nextBlock(){
+  if(!validateBlock()) return;
+  if(currentBlock<NUM_BLOCKS-1){ renderBlock(currentBlock+1); }
+  else { submitSurvey(); }
+}
+function prevBlock(){ if(currentBlock>0) renderBlock(currentBlock-1); }
+function goToBlock(i){ if(i<=currentBlock) renderBlock(i); }
+
+function updateNavButtons(){
+  document.getElementById('btn-prev').style.display=currentBlock===0?'none':'';
+  document.getElementById('btn-next').textContent=currentBlock===NUM_BLOCKS-1?t.submit:t.next;
+}
+
+async function submitSurvey(){
+  if(!validateBlock()) return;
+  const btn=document.getElementById('btn-next');
+  btn.disabled=true; btn.textContent=t.submitting;
+  await flushToSupabase(true);
+  document.getElementById('survey-screen').style.display='none';
+  const ds=document.getElementById('done-screen');
+  ds.style.display='flex';
+  document.getElementById('done-title').textContent=t.doneTitle;
+  document.getElementById('done-subtitle').textContent=t.doneSubtitle;
+}
+</script>
+</body>
+</html>

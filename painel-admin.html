@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Mining Climate Research</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F1419;--bg2:#161D26;--bg3:#1E2A38;--bg4:#243347;
+  --border:rgba(255,255,255,.07);
+  --copper:#C8813A;--copper-dim:rgba(200,129,58,.15);
+  --teal:#2EC4A0;--teal-dim:rgba(46,196,160,.12);
+  --blue:#4A9EE8;--blue-dim:rgba(74,158,232,.12);
+  --amber:#F5B642;--red:#E05C5C;--green:#4CAF7A;
+  --text:#E8EDF2;--text-mid:#8A99AA;--text-dim:#4A5562;
+  --white:#FFFFFF;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;z-index:100;}
+.topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;color:var(--white);}
+.topbar-icon{width:28px;height:28px;background:var(--copper);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.topbar-sep{width:1px;height:24px;background:var(--border);}
+.topbar-tabs{display:flex;gap:2px;flex:1;}
+.topbar-tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text-mid);cursor:pointer;transition:all .15s;border:1px solid transparent;user-select:none;}
+.topbar-tab:hover{color:var(--text);background:var(--bg3);}
+.topbar-tab.active{color:var(--copper);background:var(--copper-dim);border-color:rgba(200,129,58,.2);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(46,196,160,.2);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+.btn{padding:6px 14px;border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent;}
+.btn-ghost{background:var(--bg3);color:var(--text-mid);border-color:var(--border);}
+.btn-ghost:hover{color:var(--text);}
+.btn-copper{background:var(--copper);color:var(--white);}
+.btn-copper:hover{filter:brightness(1.1);}
+.btn-teal{background:var(--teal-dim);color:var(--teal);border-color:rgba(46,196,160,.25);}
+.btn-teal:hover{background:rgba(46,196,160,.2);}
+.btn-danger{background:rgba(224,92,92,.15);color:var(--red);border-color:rgba(224,92,92,.25);}
+.btn-danger:hover{background:rgba(224,92,92,.25);}
+
+/* MAIN */
+.main{display:flex;flex:1;overflow:hidden;}
+.pane{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.pane.active{display:flex;}
+
+/* ── PANE CONFIG ─────────────────────────────────────────── */
+.config-pane{padding:32px;max-width:680px;margin:0 auto;width:100%;overflow-y:auto;}
+.config-pane h2{font-family:'Space Grotesk',sans-serif;font-size:1.4rem;color:var(--white);margin-bottom:6px;}
+.config-pane .sub{font-size:13px;color:var(--text-mid);margin-bottom:28px;line-height:1.7;}
+.config-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px;}
+.config-card h3{font-size:13px;font-weight:600;color:var(--text-mid);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;}
+.field-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:10px;margin-bottom:12px;}
+.field-row label{font-size:12px;color:var(--text-mid);font-weight:500;}
+.field-input{background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 12px;transition:border-color .15s;width:100%;}
+.field-input:focus{outline:none;border-color:var(--copper);}
+.sql-block{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);line-height:1.7;white-space:pre;overflow-x:auto;margin-bottom:12px;}
+.copy-btn{padding:6px 12px;background:var(--bg3);color:var(--text-mid);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;}
+.copy-btn:hover{color:var(--text);}
+.status-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border-radius:8px;margin-top:12px;font-size:13px;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-dot.ok{background:var(--teal);}
+.status-dot.err{background:var(--red);}
+.status-dot.pending{background:var(--amber);animation:blink 1.5s infinite;}
+
+/* ── PANE EDITOR ─────────────────────────────────────────── */
+.editor-layout{display:flex;flex:1;overflow:hidden;}
+.q-list-panel{width:280px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.panel-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.panel-title{font-size:12px;font-weight:600;color:var(--text-mid);letter-spacing:.08em;text-transform:uppercase;}
+.q-list-scroll{flex:1;overflow-y:auto;}
+.q-list-scroll::-webkit-scrollbar{width:4px;}
+.q-list-scroll::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.block-label{padding:10px 16px 6px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--copper);opacity:.7;}
+.q-item{padding:9px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;border-left:2px solid transparent;}
+.q-item:hover{background:var(--bg3);}
+.q-item.selected{background:var(--copper-dim);border-left-color:var(--copper);}
+.q-item-num{width:22px;height:22px;background:var(--bg4);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text-mid);flex-shrink:0;}
+.q-item.selected .q-item-num{background:var(--copper);color:white;}
+.q-item-text{font-size:12px;color:var(--text-mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+.q-item.selected .q-item-text{color:var(--text);}
+.q-type-tag{font-size:9px;padding:2px 5px;border-radius:3px;background:var(--bg4);color:var(--text-dim);flex-shrink:0;}
+.q-edit-panel{flex:1;overflow-y:auto;background:var(--bg);padding:24px;}
+.q-edit-panel::-webkit-scrollbar{width:6px;}
+.q-edit-panel::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:6px;}
+.edit-section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;margin-top:24px;}
+.edit-section-title:first-child{margin-top:0;}
+.field-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.field-label{font-size:12px;font-weight:500;color:var(--text-mid);}
+.field-inp,.field-sel,.field-ta{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;transition:border-color .15s;width:100%;}
+.field-inp:focus,.field-sel:focus,.field-ta:focus{outline:none;border-color:var(--copper);}
+.field-sel option{background:var(--bg2);}
+.field-ta{resize:vertical;min-height:80px;line-height:1.5;}
+.options-edit{display:flex;flex-direction:column;gap:6px;}
+.option-row{display:flex;gap:6px;align-items:center;}
+.option-row .field-inp{flex:1;}
+.add-opt-btn{padding:8px 14px;border:1px dashed var(--border);border-radius:7px;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;text-align:left;margin-top:4px;}
+.add-opt-btn:hover{border-color:var(--copper);color:var(--copper);}
+.edit-footer{margin-top:24px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-dim);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state p{font-size:13px;line-height:1.6;}
+
+/* ── PANE DASHBOARD ──────────────────────────────────────── */
+.dashboard-layout{display:flex;flex:1;overflow:hidden;}
+.dash-sidebar{width:200px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:16px 0;}
+.dash-sidebar::-webkit-scrollbar{width:4px;}
+.dash-sidebar::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.dash-section-label{padding:8px 16px 4px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);}
+.dash-nav-item{padding:8px 16px;font-size:12px;color:var(--text-mid);cursor:pointer;transition:all .1s;border-left:2px solid transparent;display:flex;align-items:center;gap:6px;}
+.dash-nav-item:hover{background:var(--bg3);color:var(--text);}
+.dash-nav-item.active{color:var(--copper);border-left-color:var(--copper);background:var(--copper-dim);}
+.dash-nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.dash-main{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg);}
+.dash-main::-webkit-scrollbar{width:6px;}
+.dash-main::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:6px;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.copper::before{background:var(--copper);}
+.stat-card.teal::before{background:var(--teal);}
+.stat-card.blue::before{background:var(--blue);}
+.stat-card.amber::before{background:var(--amber);}
+.stat-label{font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.stat-value{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--white);line-height:1;margin-bottom:4px;}
+.stat-sub{font-size:11px;color:var(--text-mid);}
+
+.chart-grid{display:grid;gap:12px;}
+.chart-grid.cols2{grid-template-columns:1fr 1fr;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.chart-card-title{font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.chart-card-title span{font-size:10px;color:var(--text-dim);}
+.chart-wrap{position:relative;height:220px;}
+.chart-wrap.tall{height:300px;}
+.chart-wrap.short{height:160px;}
+
+.freq-table{width:100%;border-collapse:collapse;font-size:12px;}
+.freq-table th{padding:6px 10px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);text-align:left;}
+.freq-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text-mid);}
+.freq-bar-bg{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;min-width:80px;}
+.freq-bar-fill{height:100%;background:var(--copper);border-radius:3px;transition:width .6s ease;}
+
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.filter-label{font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.filter-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text-mid);background:var(--bg2);transition:all .15s;user-select:none;}
+.filter-chip:hover{color:var(--text);}
+.filter-chip.active{background:var(--copper-dim);color:var(--copper);border-color:rgba(200,129,58,.3);}
+
+.alert-box{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--text-mid);line-height:1.5;}
+.no-data{text-align:center;padding:40px;color:var(--text-dim);font-size:13px;}
+
+/* RESPONSES TABLE */
+.responses-table-wrap{overflow-x:auto;}
+.responses-table{width:100%;border-collapse:collapse;font-size:12px;}
+.responses-table th{background:var(--bg3);color:var(--text-mid);padding:8px 12px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.responses-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-mid);vertical-align:middle;}
+.responses-table tr:hover td{background:var(--bg2);color:var(--text);}
+.lang-chip{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.lang-chip.pt{background:rgba(46,196,160,.15);color:var(--teal);}
+.lang-chip.en{background:rgba(74,158,232,.15);color:var(--blue);}
+.lang-chip.es{background:rgba(245,182,66,.15);color:var(--amber);}
+.completed-chip{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.completed-chip.yes{background:rgba(76,175,122,.15);color:var(--green);}
+.completed-chip.no{background:var(--bg4);color:var(--text-dim);}
+
+@media(max-width:900px){
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .chart-grid.cols2{grid-template-columns:1fr;}
+  .dash-sidebar{display:none;}
+  .q-list-panel{width:220px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ CONFIGURAÇÃO SUPABASE ═══════════════════════════════════
+     Substitua abaixo pelos dados do seu projeto
+══════════════════════════════════════════════════════════════ -->
+<script>
+let SUPABASE_URL  = localStorage.getItem('sb_url')  || 'https://ddmaajvjplvwaksviflc.supabase.co';
+let SUPABASE_ANON = localStorage.getItem('sb_anon') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbWFhanZqcGx2d2Frc3ZpZmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg0MjgsImV4cCI6MjA5ODI4NDQyOH0.KrchCk9uxbD5Qh-NpstKC7bqlm-KXS1_y-dJCNZPv7c';
+</script>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand"><div class="topbar-icon">⛏</div>Mining Research Admin</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-tabs">
+    <div class="topbar-tab active" onclick="switchPane('config')" id="tab-config">⚙ Configuração</div>
+    <div class="topbar-tab" onclick="switchPane('editor')" id="tab-editor">✏ Editor</div>
+    <div class="topbar-tab" onclick="switchPane('dashboard')" id="tab-dashboard">📊 Dashboard</div>
+    <div class="topbar-tab" onclick="switchPane('responses')" id="tab-responses">📋 Respostas</div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-dot" title="Live — dados em tempo real"></div>
+    <div class="badge" id="resp-count-badge">— respostas</div>
+    <button class="btn btn-ghost" onclick="loadResponses()">↻ Atualizar</button>
+    <button class="btn btn-ghost" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ── CONFIG PANE ──────────────────────────────────────────── -->
+  <div class="pane" id="pane-config">
+    <div class="config-pane">
+      <h2>Configuração do Supabase</h2>
+      <p class="sub">Configure a conexão com o banco de dados. Após salvar, o painel carregará as respostas automaticamente em tempo real.</p>
+
+      <div class="config-card">
+        <h3>Credenciais do Projeto</h3>
+        <div class="field-row">
+          <label>Project URL</label>
+          <input type="text" class="field-input" id="inp-url" placeholder="https://xxxx.supabase.co" value="">
+        </div>
+        <div class="field-row">
+          <label>Anon Key</label>
+          <input type="text" class="field-input" id="inp-anon" placeholder="eyJhbGci..." value="">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-copper" onclick="saveCredentials()">✓ Salvar e testar conexão</button>
+          <button class="btn btn-ghost" onclick="testConnection()">🔍 Só testar</button>
+        </div>
+        <div class="status-row" id="conn-status" style="display:none">
+          <div class="status-dot pending" id="status-dot"></div>
+          <span id="status-text">Testando...</span>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <h3>SQL — Criar tabela no Supabase</h3>
+        <p style="font-size:12px;color:var(--text-mid);margin-bottom:12px;">Cole este SQL no <strong>SQL Editor</strong> do seu projeto Supabase (supabase.com → projeto → SQL Editor → New query):</p>
+        <div class="sql-block" id="sql-block">-- Execute no SQL Editor do Supabase
+-- Se a tabela já existe, rode apenas o bloco ALTER TABLE abaixo
+
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id                 bigserial PRIMARY KEY,
+  response_id        text NOT NULL,
+  lang               text,
+  country            text,
+  respondent_profile text,
+  org_size           text,
+  answers            jsonb DEFAULT \'{}\',
+  completed          boolean DEFAULT false,
+  submitted_at       timestamptz,
+  updated_at         timestamptz DEFAULT now(),
+  created_at         timestamptz DEFAULT now(),
+  -- UNIQUE obrigatório para o upsert funcionar
+  CONSTRAINT survey_responses_response_id_key UNIQUE (response_id)
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_sr_country   ON survey_responses(country);
+CREATE INDEX IF NOT EXISTS idx_sr_completed ON survey_responses(completed);
+CREATE INDEX IF NOT EXISTS idx_sr_lang      ON survey_responses(lang);
+
+-- Se a tabela já existia sem UNIQUE, rode isto:
+-- ALTER TABLE survey_responses
+--   ADD CONSTRAINT survey_responses_response_id_key UNIQUE (response_id);
+
+-- Row Level Security
+ALTER TABLE survey_responses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "allow_insert_update" ON survey_responses;
+CREATE POLICY "allow_insert_update" ON survey_responses
+  FOR ALL USING (true) WITH CHECK (true);</div>
+        <button class="copy-btn" onclick="copySQL()">📋 Copiar SQL</button>
+      </div>
+
+      <div class="config-card">
+        <h3>Onde encontrar as credenciais</h3>
+        <p style="font-size:13px;color:var(--text-mid);line-height:1.8;">
+          1. Acesse <strong style="color:var(--white)">supabase.com</strong> → seu projeto<br>
+          2. Menu lateral → <strong style="color:var(--white)">Project Settings</strong> → <strong style="color:var(--white)">API</strong><br>
+          3. Copie a <strong style="color:var(--copper)">Project URL</strong> e a chave <strong style="color:var(--copper)">anon public</strong><br>
+          4. Cole acima e clique em Salvar<br>
+          5. Execute o SQL acima para criar a tabela<br>
+          6. Cole as mesmas credenciais no <code style="color:var(--teal);font-size:12px">questionario.html</code> (linhas 2–3 do script)
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EDITOR PANE ───────────────────────────────────────────── -->
+  <div class="pane" id="pane-editor">
+    <div class="editor-layout">
+      <div class="q-list-panel">
+        <div class="panel-header">
+          <span class="panel-title">Perguntas</span>
+          <button class="btn btn-copper" onclick="addQuestion()" style="padding:4px 10px;font-size:11px;">+ Nova</button>
+        </div>
+        <div class="q-list-scroll" id="q-list-scroll"></div>
+      </div>
+      <div class="q-edit-panel" id="q-edit-panel">
+        <div class="empty-state"><div class="icon">📋</div><p>Selecione uma pergunta à esquerda para editar,<br>ou clique em <strong>+ Nova</strong> para criar.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD PANE ────────────────────────────────────────── -->
+  <div class="pane" id="pane-dashboard">
+    <div class="dashboard-layout">
+      <div class="dash-sidebar">
+        <div class="dash-section-label">Visão Geral</div>
+        <div class="dash-nav-item active" onclick="showSection('overview')" id="nav-overview"><span class="dash-nav-dot"></span>Resumo</div>
+        <div class="dash-nav-item" onclick="showSection('profile')" id="nav-profile"><span class="dash-nav-dot"></span>Perfil Amostral</div>
+        <div class="dash-section-label" style="margin-top:8px">Blocos</div>
+        <div class="dash-nav-item" onclick="showSection('vuln')" id="nav-vuln"><span class="dash-nav-dot"></span>Vulnerabilidades</div>
+        <div class="dash-nav-item" onclick="showSection('strategies')" id="nav-strategies"><span class="dash-nav-dot"></span>Estratégias</div>
+        <div class="dash-nav-item" onclick="showSection('operational')" id="nav-operational"><span class="dash-nav-dot"></span>Gestão Op.</div>
+        <div class="dash-nav-item" onclick="showSection('governance')" id="nav-governance"><span class="dash-nav-dot"></span>Governança</div>
+        <div class="dash-nav-item" onclick="showSection('social')" id="nav-social"><span class="dash-nav-dot"></span>Socioambiental</div>
+        <div class="dash-nav-item" onclick="showSection('maturity')" id="nav-maturity"><span class="dash-nav-dot"></span>Maturidade</div>
+        <div class="dash-section-label" style="margin-top:8px">Comparativo</div>
+        <div class="dash-nav-item" onclick="showSection('country')" id="nav-country"><span class="dash-nav-dot"></span>Por País</div>
+        <div class="dash-nav-item" onclick="showSection('profile-compare')" id="nav-profile-compare"><span class="dash-nav-dot"></span>Por Perfil</div>
+      </div>
+      <div class="dash-main" id="dash-main"><div class="no-data">Configure a conexão Supabase e atualize os dados.</div></div>
+    </div>
+  </div>
+
+  <!-- ── RESPONSES PANE ───────────────────────────────────────── -->
+  <div class="pane" id="pane-responses">
+    <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.2rem;color:var(--white);">Todas as Respostas</h2>
+          <p style="font-size:12px;color:var(--text-mid);margin-top:2px;">Dados carregados do Supabase em tempo real</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-teal" onclick="loadResponses()">↻ Recarregar</button>
+          <button class="btn btn-ghost" onclick="exportCSV()">⬇ Exportar CSV</button>
+        </div>
+      </div>
+      <div class="responses-table-wrap">
+        <table class="responses-table">
+          <thead><tr>
+            <th>ID</th><th>Idioma</th><th>Data</th><th>País</th><th>Perfil</th><th>Porte</th><th>Status</th>
+          </tr></thead>
+          <tbody id="responses-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-dim)">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// SUPABASE REST CLIENT
+// ══════════════════════════════════════════════════════════════
+async function sbFetch(path, opts={}){
+  if(!SUPABASE_URL||!SUPABASE_ANON) throw new Error('Supabase não configurado');
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+    ...opts,
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':SUPABASE_ANON,
+      'Authorization':`Bearer ${SUPABASE_ANON}`,
+      ...(opts.headers||{})
+    }
+  });
+  if(!r.ok){ const e=await r.text(); throw new Error(e); }
+  return r.json();
+}
+
+async function fetchAllResponses(){
+  return sbFetch('survey_responses?select=*&order=created_at.desc&limit=1000');
+}
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let responses=[];
+let currentSection='overview';
+let activeCountryFilter='all';
+let selectedQId=null;
+let refreshInterval=null;
+
+const BLOCK_NAMES=['Caracterização','Vulnerabilidades','Estratégias','Gestão Op.','Governança','Socioambiental','Maturidade'];
+
+let adminQuestions=[
+  {id:'q1',block:0,type:'radio',required:true,text:'País de atuação principal',options:['Brasil','Canadá','Chile','Peru']},
+  {id:'q2',block:0,type:'radio',required:true,text:'Perfil do respondente',options:['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)','Outro']},
+  {id:'q3',block:0,type:'radio',required:true,text:'Porte da organização',options:['Micro/Pequeno (<100 func.)','Médio (100–999 func.)','Grande (1.000–9.999 func.)','Multinacional (≥10.000 func.)']},
+  {id:'q4',block:0,type:'checkbox',required:true,text:'Tipo de mineral(is) predominante(s)',options:['Minerais críticos para transição energética (lítio, cobre, cobalto, níquel)','Minerais ferrosos (ferro, manganês)','Ouro e metais preciosos','Minerais industriais (fosfato, potássio, caulim)','Carvão mineral','Outro']},
+  {id:'q5',block:0,type:'radio',required:true,text:'Tempo de atuação no setor',options:['< 5 anos','5–15 anos','16–30 anos','> 30 anos']},
+  {id:'q6',block:1,type:'likert5',required:true,text:'Nível de risco climático (horizonte 10 anos)'},
+  {id:'q7',block:1,type:'checkbox',required:true,text:'Riscos climáticos físicos relevantes',options:['Escassez hídrica / seca prolongada','Inundações e enxurradas','Deslizamentos e instabilidade de terreno','Aumento de temperatura / ondas de calor','Tempestades e eventos meteorológicos extremos','Incêndios florestais próximos às operações','Degradação de permafrost (Canadá)','Nenhum dos acima']},
+  {id:'q8',block:1,type:'checkbox',required:true,text:'Riscos de transição climática relevantes',options:['Regulação de carbono / precificação','Mudanças nas exigências de licenciamento','Pressão de investidores por ESG/clima','Mudanças na demanda por minerais','Litígio climático','Pressão de comunidades e ONGs','Nenhum dos acima']},
+  {id:'q9',block:1,type:'radio',required:true,text:'Análise formal de risco climático realizada?',options:['Sim, publicada','Sim, interna','Em desenvolvimento','Não, mas planejada','Não']},
+  {id:'q10',block:2,type:'radio',required:true,text:'Estratégia formal de adaptação climática',options:['Sim, implementada','Sim, em fase inicial','Em desenvolvimento','Adaptações informais','Sem estratégia']},
+  {id:'q11',block:2,type:'matrix',required:false,text:'Implementação de estratégias adaptativas (1–5)',rows:['Reuso de água','Energia renovável','Infraestrutura resiliente','ERM climático','Monitoramento','Contingência desastres','Engajamento comunidades','Inovação tecnológica'],cols:['1','2','3','4','5']},
+  {id:'q12',block:2,type:'radio',required:true,text:'Principal barreira à adaptação',options:['Falta de recursos financeiros','Falta de dados climáticos','Ausência expertise técnica','Falta prioridade institucional','Incerteza regulatória','Pressão curto prazo','Outro']},
+  {id:'q13',block:2,type:'likert5',required:true,text:'Impacto das mudanças climáticas nos custos operacionais'},
+  {id:'q14',block:3,type:'checkbox',required:true,text:'Gestão do risco hídrico',options:['Recirculação de água','Fontes alternativas','Monitoramento bacias','Acordos comunitários','Barragens próprias','Sem gestão específica']},
+  {id:'q15',block:3,type:'radio',required:true,text:'% energia renovável na matriz',options:['0%','1–20%','21–50%','51–80%','>80%']},
+  {id:'q16',block:3,type:'radio',required:true,text:'Monitoramento ambiental em tempo real',options:['Sim, abrangente','Sim, parcial','Em implementação','Não, mas interesse','Sem interesse']},
+  {id:'q17',block:3,type:'radio',required:true,text:'Mudanças climáticas alteraram logística?',options:['Sim, mudanças estruturais','Sim, ajustes pontuais','Não, mas antecipa','Não e não antecipa']},
+  {id:'q18',block:4,type:'likert5',required:true,text:'Avaliação do arcabouço regulatório do país'},
+  {id:'q19',block:4,type:'checkbox',required:true,text:'Participação em iniciativas coletivas',options:['Assoc. setoriais (IBRAM/MAC/SONAMI/SNMPE)','Iniciativas internacionais (ICMM/CDP/TCFD)','Grupos governamentais','Parcerias universitárias','Não participa']},
+  {id:'q20',block:4,type:'radio',required:true,text:'Integração clima à governança corporativa',options:['Totalmente (Conselho + remuneração)','Parcialmente (comitê dedicado)','Em processo','Apenas operacional','Não integrado']},
+  {id:'q21',block:4,type:'checkbox',required:false,text:'Frameworks de reporte utilizados',options:['GRI','TCFD','SASB','ISSB/IFRS S2','Relatório próprio','Não divulga']},
+  {id:'q22',block:5,type:'radio',required:true,text:'Conflitos com comunidades por razões climáticas?',options:['Sim, conflitos diretos','Sim, conflitos indiretos','Não, risco monitorado','Não e sem percepção de risco']},
+  {id:'q23',block:5,type:'radio',required:true,text:'Inclusão de comunidades na adaptação',options:['Sim, processos formais','Sim, informal/pontual','Em desenvolvimento','Não, mas há interesse','Sem planos']},
+  {id:'q24',block:5,type:'likert5',required:true,text:'Impacto clima sobre licença social para operar'},
+  {id:'q25',block:5,type:'radio',required:true,text:'Programas para populações vulneráveis',options:['Sim, programas formais','Sim, iniciativas pontuais','Em desenvolvimento','Sem programas']},
+  {id:'q26',block:6,type:'likert5',required:true,text:'Maturidade em resiliência climática vs. setor'},
+  {id:'q27',block:6,type:'checkbox',required:true,max:3,text:'Ações prioritárias (máx. 3)',options:['Investimento P&D','Marco regulatório','Financiamento climático','Capacitação profissional','Transparência de riscos','Cooperação internacional','Engajamento comunitário','Outro']},
+  {id:'q28',block:6,type:'radio',required:true,text:'Interesse em redes de cooperação internacional',options:['Muito interesse','Interesse moderado','Talvez','Pouco interesse','Sem interesse']},
+  {id:'q29',block:6,type:'textarea',required:false,text:'Comentários adicionais (questão aberta)'},
+];
+
+function saveQuestions(){ localStorage.setItem('admin_questions',JSON.stringify(adminQuestions)); }
+function loadQuestions(){ const q=localStorage.getItem('admin_questions'); if(q) try{adminQuestions=JSON.parse(q);}catch(e){} }
+
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+function saveCredentials(){
+  SUPABASE_URL=(document.getElementById('inp-url').value||'').trim();
+  SUPABASE_ANON=(document.getElementById('inp-anon').value||'').trim();
+  if(!SUPABASE_URL||!SUPABASE_ANON){ alert('Preencha os dois campos.'); return; }
+  localStorage.setItem('sb_url',SUPABASE_URL);
+  localStorage.setItem('sb_anon',SUPABASE_ANON);
+  testConnection();
+}
+
+async function testConnection(){
+  const el=document.getElementById('conn-status');
+  const dot=document.getElementById('status-dot');
+  const txt=document.getElementById('status-text');
+  el.style.display='flex'; dot.className='status-dot pending'; txt.textContent='Testando conexão...';
+  try{
+    const data=await sbFetch('survey_responses?select=count&limit=1');
+    dot.className='status-dot ok';
+    txt.textContent='✓ Conexão OK — tabela survey_responses encontrada!';
+    loadResponses();
+    startAutoRefresh();
+  } catch(e){
+    dot.className='status-dot err';
+    if(e.message.includes('relation')&&e.message.includes('does not exist'))
+      txt.textContent='⚠ Tabela não encontrada. Execute o SQL acima no Supabase.';
+    else
+      txt.textContent='✗ Erro: '+e.message.slice(0,120);
+  }
+}
+
+function copySQL(){
+  navigator.clipboard.writeText(document.getElementById('sql-block').textContent)
+    .then(()=>{ const b=event.target; b.textContent='✓ Copiado!'; setTimeout(()=>b.textContent='📋 Copiar SQL',2000); });
+}
+
+// ══════════════════════════════════════════════════════════════
+// DATA LOADING
+// ══════════════════════════════════════════════════════════════
+async function loadResponses(){
+  const badge = document.getElementById('resp-count-badge');
+  if(badge) badge.textContent = '⟳ carregando...';
+  try{
+    const data = await fetchAllResponses();
+    responses = data.map(r => ({
+      meta:    { id: r.response_id, lang: r.lang||'pt', timestamp: r.created_at },
+      answers: r.answers || {},
+      completed: r.completed,
+      // normaliza país para português independente do idioma da resposta
+      country: normalizeCountry(r.country || r.answers?.q1?.value),
+      profile: r.respondent_profile || r.answers?.q2?.value || null,
+    }));
+    updateBadge();
+    renderResponsesTable();
+    renderDashboard();
+  } catch(e){
+    console.error('Supabase load error:', e);
+    if(badge) badge.textContent = '⚠ erro ao carregar';
+    const dm = document.getElementById('dash-main');
+    if(dm) dm.innerHTML = `<div class="alert-box">⚠ Erro ao carregar dados do Supabase: <strong>${e.message}</strong><br>Verifique as credenciais na aba Configuração e certifique-se de que o SQL da tabela foi executado.</div>`;
+  }
+}
+
+// Normaliza país para PT independente do idioma da resposta
+function normalizeCountry(raw){
+  if(!raw) return null;
+  const map = {
+    'Brazil':'Brasil','Canada':'Canadá','Chile':'Chile','Peru':'Peru','Perú':'Peru',
+    'Brasil':'Brasil','Canadá':'Canadá',
+  };
+  return map[raw] || raw;
+}
+
+function startAutoRefresh(){
+  if(refreshInterval) clearInterval(refreshInterval);
+  refreshInterval=setInterval(loadResponses, 30000); // a cada 30s
+}
+
+function updateBadge(){
+  const n=responses.length;
+  const done=responses.filter(r=>r.completed).length;
+  document.getElementById('resp-count-badge').textContent=`${n} respostas (${done} completas)`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PANE SWITCHING
+// ══════════════════════════════════════════════════════════════
+function switchPane(name){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.topbar-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='editor') renderQList();
+  if(name==='dashboard') renderDashboard();
+  if(name==='responses') renderResponsesTable();
+  if(name==='config'){
+    document.getElementById('inp-url').value=SUPABASE_URL||'';
+    document.getElementById('inp-anon').value=SUPABASE_ANON||'';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESPONSES TABLE
+// ══════════════════════════════════════════════════════════════
+function renderResponsesTable(){
+  const tbody=document.getElementById('responses-tbody');
+  if(!responses.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-dim)">Nenhuma resposta carregada. Configure o Supabase e clique em Atualizar.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=responses.map(r=>{
+    const dt=new Date(r.meta.timestamp).toLocaleString('pt-BR');
+    const lang=r.meta.lang||'?';
+    const completed=r.completed;
+    return `<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim)">${(r.meta.id||'').slice(-10)}</td>
+      <td><span class="lang-chip ${lang}">${lang.toUpperCase()}</span></td>
+      <td>${dt}</td>
+      <td>${r.country||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.profile||'—'}</td>
+      <td>${r.answers?.q3?.value||'—'}</td>
+      <td><span class="completed-chip ${completed?'yes':'no'}">${completed?'Completa':'Em progresso'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// EDITOR
+// ══════════════════════════════════════════════════════════════
+function renderQList(){
+  const scroll=document.getElementById('q-list-scroll');
+  let html='';
+  for(let b=0;b<7;b++){
+    const bqs=adminQuestions.filter(q=>q.block===b);
+    if(!bqs.length) continue;
+    html+=`<div><div class="block-label">${BLOCK_NAMES[b]}</div>`;
+    bqs.forEach(q=>{
+      const n=adminQuestions.indexOf(q)+1;
+      const typeMap={radio:'R',checkbox:'C',likert5:'L',matrix:'M',textarea:'T'};
+      html+=`<div class="q-item${selectedQId===q.id?' selected':''}" onclick="selectQ('${q.id}')">
+        <div class="q-item-num">${n}</div>
+        <div class="q-item-text">${q.text}</div>
+        <div class="q-type-tag">${typeMap[q.type]||'?'}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  scroll.innerHTML=html;
+}
+
+function selectQ(id){
+  selectedQId=id;
+  const q=adminQuestions.find(q=>q.id===id);
+  renderQList(); renderQEditor(q);
+}
+
+function renderQEditor(q){
+  const panel=document.getElementById('q-edit-panel');
+  const typeOpts=['radio','checkbox','likert5','matrix','textarea'].map(t=>`<option value="${t}" ${q.type===t?'selected':''}>${t}</option>`).join('');
+  let optHtml='';
+  if(['radio','checkbox'].includes(q.type)&&q.options){
+    optHtml=`<div class="edit-section-title">Opções</div>
+    <div class="options-edit" id="options-edit">
+      ${q.options.map((o,i)=>`<div class="option-row">
+        <input type="text" class="field-inp" value="${o}" onchange="updateOption(${i},this.value)">
+        <button class="btn btn-danger" onclick="removeOption(${i})" style="padding:5px 9px;">✕</button>
+      </div>`).join('')}
+    </div>
+    <button class="add-opt-btn" onclick="addOption()">+ Adicionar opção</button>`;
+  }
+  if(q.type==='matrix'){
+    optHtml=`<div class="edit-section-title">Linhas da matriz</div>
+    <div class="options-edit">
+      ${(q.rows||[]).map((r,i)=>`<div class="option-row">
+        <input type="text" class="field-inp" value="${r}" onchange="updateRow(${i},this.value)">
+        <button class="btn btn-danger" onclick="removeRow(${i})" style="padding:5px 9px;">✕</button>
+      </div>`).join('')}
+    </div>
+    <button class="add-opt-btn" onclick="addRow()">+ Adicionar linha</button>`;
+  }
+  panel.innerHTML=`
+    <div class="edit-section-title">Identificação</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="field-group"><label class="field-label">ID</label><input class="field-inp" value="${q.id}" readonly style="opacity:.5;"></div>
+      <div class="field-group"><label class="field-label">Bloco (0–6)</label><input type="number" class="field-inp" value="${q.block}" min="0" max="6" onchange="updateQF('block',parseInt(this.value))"></div>
+      <div class="field-group"><label class="field-label">Tipo</label><select class="field-sel" onchange="updateQF('type',this.value);renderQEditor(adminQuestions.find(x=>x.id===selectedQId))">${typeOpts}</select></div>
+    </div>
+    <div class="edit-section-title">Texto</div>
+    <div class="field-group"><textarea class="field-ta" onchange="updateQF('text',this.value)">${q.text}</textarea></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <input type="checkbox" ${q.required?'checked':''} onchange="updateQF('required',this.checked)" style="width:16px;height:16px;accent-color:var(--copper);">
+      <label class="field-label" style="cursor:pointer">Pergunta obrigatória</label>
+    </div>
+    ${optHtml}
+    <div class="edit-footer">
+      <button class="btn btn-danger" onclick="deleteQuestion('${q.id}')">🗑 Excluir</button>
+      <button class="btn btn-teal" onclick="duplicateQuestion('${q.id}')">⎘ Duplicar</button>
+      <button class="btn btn-copper" onclick="saveQuestions();renderQList()">✓ Salvar</button>
+    </div>`;
+}
+
+function updateQF(f,v){ const q=adminQuestions.find(q=>q.id===selectedQId); if(q) q[f]=v; }
+function updateOption(i,v){ const q=adminQuestions.find(q=>q.id===selectedQId); if(q?.options) q.options[i]=v; }
+function addOption(){ const q=adminQuestions.find(q=>q.id===selectedQId); if(!q.options) q.options=[]; q.options.push('Nova opção'); renderQEditor(q); }
+function removeOption(i){ const q=adminQuestions.find(q=>q.id===selectedQId); if(q?.options){q.options.splice(i,1);renderQEditor(q);} }
+function updateRow(i,v){ const q=adminQuestions.find(q=>q.id===selectedQId); if(q?.rows) q.rows[i]=v; }
+function addRow(){ const q=adminQuestions.find(q=>q.id===selectedQId); if(!q.rows) q.rows=[]; q.rows.push('Novo item'); renderQEditor(q); }
+function removeRow(i){ const q=adminQuestions.find(q=>q.id===selectedQId); if(q?.rows){q.rows.splice(i,1);renderQEditor(q);} }
+function addQuestion(){
+  const nid='q'+Date.now();
+  adminQuestions.push({id:nid,block:0,type:'radio',required:true,text:'Nova pergunta',options:['Opção A','Opção B']});
+  saveQuestions(); renderQList(); selectQ(nid);
+}
+function deleteQuestion(id){
+  if(!confirm('Excluir?')) return;
+  adminQuestions=adminQuestions.filter(q=>q.id!==id);
+  selectedQId=null; saveQuestions(); renderQList();
+  document.getElementById('q-edit-panel').innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>Selecione uma pergunta.</p></div>`;
+}
+function duplicateQuestion(id){
+  const q=adminQuestions.find(q=>q.id===id);
+  const copy=JSON.parse(JSON.stringify(q)); copy.id='q'+Date.now(); copy.text+=' (cópia)';
+  const idx=adminQuestions.indexOf(q); adminQuestions.splice(idx+1,0,copy);
+  saveQuestions(); renderQList(); selectQ(copy.id);
+}
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+let charts={};
+function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}}); charts={}; }
+
+function filteredResponses(){
+  const base=responses.filter(r=>r.completed||true); // mostra todas (completas e em progresso)
+  if(activeCountryFilter==='all') return base;
+  return base.filter(r=>r.country===activeCountryFilter);
+}
+
+function showSection(s){
+  currentSection=s;
+  document.querySelectorAll('.dash-nav-item').forEach(n=>n.classList.remove('active'));
+  const el=document.getElementById('nav-'+s); if(el) el.classList.add('active');
+  renderDashboard();
+}
+
+function renderDashboard(){
+  destroyCharts();
+  const dm=document.getElementById('dash-main');
+  const fr=filteredResponses();
+  const filterHtml=`<div class="filter-bar">
+    <span class="filter-label">País:</span>
+    ${['all','Brasil','Canadá','Chile','Peru'].map(c=>`<div class="filter-chip${activeCountryFilter===c?' active':''}" onclick="setFilter('${c}')">${c==='all'?'Todos':c}</div>`).join('')}
+  </div>`;
+  if(!fr.length){
+    dm.innerHTML=filterHtml+`<div class="alert-box">⚠ Nenhuma resposta disponível. Configure o Supabase na aba <strong>Configuração</strong> e clique em <strong>↻ Atualizar</strong>.</div>`;
+    return;
+  }
+  const renderers={overview:renderOverview,profile:renderProfile,vuln:renderVuln,strategies:renderStrategies,operational:renderOperational,governance:renderGovernance,social:renderSocial,maturity:renderMaturity,country:renderCountry,'profile-compare':renderProfileCompare};
+  dm.innerHTML=filterHtml+(renderers[currentSection]||renderOverview)(fr);
+  setTimeout(()=>drawCharts(currentSection,fr),50);
+}
+
+function setFilter(c){ activeCountryFilter=c; renderDashboard(); }
+
+// ── STAT HELPERS ─────────────────────────────────────────────
+function getAns(resp,qid){
+  const a=resp.answers[qid];
+  if(!a) return null;
+  if(a.value!==undefined) return a.value;
+  if(a.values) return a.values.join(', ');
+  return null;
+}
+function freqTable(data,qid,opts){
+  const counts={}; opts.forEach(o=>counts[o]=0);
+  data.forEach(r=>{
+    const a=r.answers[qid]; if(!a) return;
+    if(a.value&&counts[a.value]!==undefined) counts[a.value]++;
+    if(a.values) a.values.forEach(v=>{if(counts[v]!==undefined) counts[v]++;});
+  });
+  const total=data.length;
+  return opts.map(o=>({label:o,count:counts[o],pct:total?Math.round(counts[o]/total*100):0}));
+}
+function likertMean(data,qid){
+  const vals=data.map(r=>r.answers[qid]?.value).filter(v=>v!==undefined&&v!==null);
+  if(!vals.length) return '—';
+  return (vals.reduce((a,b)=>a+Number(b),0)/vals.length).toFixed(2);
+}
+function likertDist(data,qid){
+  const d={1:0,2:0,3:0,4:0,5:0};
+  data.forEach(r=>{ const v=r.answers[qid]?.value; if(v) d[v]++; }); return d;
+}
+function matrixMeans(data,qid,rows){
+  return rows.map((row,ri)=>{
+    const vals=data.map(r=>r.answers[qid]?.rows?.[ri]).filter(v=>v!==undefined);
+    const mean=vals.length?(vals.reduce((a,b)=>a+Number(b),0)/vals.length).toFixed(2):0;
+    return {row,mean:Number(mean)};
+  });
+}
+function freqTableHtml(ft,color='copper'){
+  const max=Math.max(...ft.map(r=>r.count),1);
+  return `<table class="freq-table"><thead><tr><th>Resposta</th><th>n</th><th>%</th><th style="min-width:80px">Dist.</th></tr></thead><tbody>
+    ${ft.sort((a,b)=>b.count-a.count).map(row=>`<tr>
+      <td>${row.label}</td>
+      <td><strong style="color:var(--text)">${row.count}</strong></td>
+      <td>${row.pct}%</td>
+      <td><div class="freq-bar-bg"><div class="freq-bar-fill" style="width:${Math.round(row.count/max*100)}%;background:var(--${color})"></div></div></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+// ── SECTION RENDERERS ────────────────────────────────────────
+function renderOverview(data){
+  const n=data.length;
+  const avgRisk=likertMean(data,'q6'), avgCost=likertMean(data,'q13');
+  const hasStrat=data.filter(r=>{const v=getAns(r,'q10');return v&&(v.includes('Sim')||v.includes('Yes')||v.includes('Sí'));}).length;
+  return `<div class="stat-grid">
+    <div class="stat-card copper"><div class="stat-label">Total de Respostas</div><div class="stat-value">${n}</div><div class="stat-sub">${data.filter(r=>r.completed).length} completas</div></div>
+    <div class="stat-card teal"><div class="stat-label">Risco Climático Médio</div><div class="stat-value">${avgRisk}/5</div><div class="stat-sub">Q6 — horizonte 10 anos</div></div>
+    <div class="stat-card blue"><div class="stat-label">Impacto em Custos</div><div class="stat-value">${avgCost}/5</div><div class="stat-sub">Q13 — média percebida</div></div>
+    <div class="stat-card amber"><div class="stat-label">Com Estratégia</div><div class="stat-value">${n?Math.round(hasStrat/n*100):0}%</div><div class="stat-sub">${hasStrat} org. (Q10)</div></div>
+  </div>
+  <div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Por País <span>Q1</span></div><div class="chart-wrap short"><canvas id="chart-country"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-title">Risco Climático <span>Q6 — Likert 1–5</span></div><div class="chart-wrap short"><canvas id="chart-risk-dist"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-title">Perfil dos Respondentes <span>Q2</span></div><div class="chart-wrap short"><canvas id="chart-profiles"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-title">Estratégia de Adaptação <span>Q10</span></div><div class="chart-wrap short"><canvas id="chart-strategy"></canvas></div></div>
+  </div>`;
+}
+function renderProfile(data){
+  const q2=adminQuestions.find(q=>q.id==='q2'),q3=adminQuestions.find(q=>q.id==='q3'),q5=adminQuestions.find(q=>q.id==='q5');
+  return `<div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Perfil do Respondente <span>Q2</span></div><div class="chart-wrap"><canvas id="chart-q2"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-title">Porte da Organização <span>Q3</span></div><div class="chart-wrap short"><canvas id="chart-q3"></canvas></div></div>
+  </div>
+  <div class="chart-card" style="margin-top:12px"><div class="chart-card-title">Tempo de Atuação <span>Q5</span></div>${freqTableHtml(freqTable(data,'q5',q5?.options||[]),'blue')}</div>`;
+}
+function renderVuln(data){
+  const q7=adminQuestions.find(q=>q.id==='q7'),q8=adminQuestions.find(q=>q.id==='q8');
+  return `<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="stat-card copper"><div class="stat-label">Risco Médio Q6</div><div class="stat-value">${likertMean(data,'q6')}/5</div></div>
+    <div class="stat-card teal"><div class="stat-label">Análise Formal (Q9)</div><div class="stat-value">${data.filter(r=>getAns(r,'q9')&&getAns(r,'q9').includes('Sim')).length}</div><div class="stat-sub">de ${data.length}</div></div>
+  </div>
+  <div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Riscos Físicos Citados <span>Q7</span></div>${freqTableHtml(freqTable(data,'q7',q7?.options||[]),'copper')}</div>
+    <div class="chart-card"><div class="chart-card-title">Riscos de Transição Citados <span>Q8</span></div>${freqTableHtml(freqTable(data,'q8',q8?.options||[]),'blue')}</div>
+  </div>
+  <div class="chart-card" style="margin-top:12px"><div class="chart-card-title">Distribuição Risco Percebido <span>Q6</span></div><div class="chart-wrap short"><canvas id="chart-risk-likert"></canvas></div></div>`;
+}
+function renderStrategies(data){
+  const q11=adminQuestions.find(q=>q.id==='q11'),q12=adminQuestions.find(q=>q.id==='q12');
+  return `<div class="chart-card" style="margin-bottom:12px"><div class="chart-card-title">Implementação Média por Estratégia <span>Q11 — média 1–5</span></div><div class="chart-wrap tall"><canvas id="chart-matrix"></canvas></div></div>
+  <div class="chart-card"><div class="chart-card-title">Principal Barreira <span>Q12</span></div>${freqTableHtml(freqTable(data,'q12',q12?.options||[]),'amber')}</div>`;
+}
+function renderOperational(data){
+  const q14=adminQuestions.find(q=>q.id==='q14'),q15=adminQuestions.find(q=>q.id==='q15');
+  return `<div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Gestão Hídrica <span>Q14</span></div>${freqTableHtml(freqTable(data,'q14',q14?.options||[]),'teal')}</div>
+    <div class="chart-card"><div class="chart-card-title">Energia Renovável <span>Q15</span></div><div class="chart-wrap"><canvas id="chart-q15"></canvas></div></div>
+  </div>`;
+}
+function renderGovernance(data){
+  const q20=adminQuestions.find(q=>q.id==='q20'),q21=adminQuestions.find(q=>q.id==='q21');
+  return `<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="stat-card blue"><div class="stat-label">Avaliação Regulatória (Q18)</div><div class="stat-value">${likertMean(data,'q18')}/5</div></div>
+    <div class="stat-card teal"><div class="stat-label">Totalmente no Conselho</div><div class="stat-value">${data.filter(r=>getAns(r,'q20')&&getAns(r,'q20').includes('Totalmente')).length}</div><div class="stat-sub">organizações (Q20)</div></div>
+  </div>
+  <div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Governança Climática <span>Q20</span></div>${freqTableHtml(freqTable(data,'q20',q20?.options||[]),'blue')}</div>
+    <div class="chart-card"><div class="chart-card-title">Frameworks de Reporte <span>Q21</span></div>${freqTableHtml(freqTable(data,'q21',q21?.options||[]),'copper')}</div>
+  </div>`;
+}
+function renderSocial(data){
+  const q22=adminQuestions.find(q=>q.id==='q22'),q23=adminQuestions.find(q=>q.id==='q23');
+  return `<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="stat-card amber"><div class="stat-label">Impacto Licença Social (Q24)</div><div class="stat-value">${likertMean(data,'q24')}/5</div></div>
+    <div class="stat-card" style="background:var(--bg2)"><div class="stat-label">Conflitos Reportados</div><div class="stat-value" style="color:var(--red)">${data.filter(r=>getAns(r,'q22')&&getAns(r,'q22').includes('Sim')).length}</div><div class="stat-sub">de ${data.length}</div></div>
+  </div>
+  <div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Conflitos com Comunidades <span>Q22</span></div>${freqTableHtml(freqTable(data,'q22',q22?.options||[]),'red')}</div>
+    <div class="chart-card"><div class="chart-card-title">Inclusão Comunitária <span>Q23</span></div>${freqTableHtml(freqTable(data,'q23',q23?.options||[]),'teal')}</div>
+  </div>`;
+}
+function renderMaturity(data){
+  const q27=adminQuestions.find(q=>q.id==='q27'),q28=adminQuestions.find(q=>q.id==='q28');
+  return `<div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="stat-card copper"><div class="stat-label">Maturidade Média (Q26)</div><div class="stat-value">${likertMean(data,'q26')}/5</div></div>
+    <div class="stat-card teal"><div class="stat-label">Muito Interesse Cooperação</div><div class="stat-value">${data.filter(r=>getAns(r,'q28')&&(getAns(r,'q28').includes('Muito')||getAns(r,'q28').includes('Very'))).length}</div><div class="stat-sub">respondentes (Q28)</div></div>
+  </div>
+  <div class="chart-grid cols2">
+    <div class="chart-card"><div class="chart-card-title">Distribuição Maturidade <span>Q26</span></div><div class="chart-wrap short"><canvas id="chart-maturity"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-title">Interesse em Cooperação <span>Q28</span></div>${freqTableHtml(freqTable(data,'q28',q28?.options||[]),'teal')}</div>
+  </div>
+  <div class="chart-card" style="margin-top:12px"><div class="chart-card-title">Ações Prioritárias <span>Q27</span></div>${freqTableHtml(freqTable(data,'q27',q27?.options||[]),'copper')}</div>`;
+}
+function renderCountry(data){
+  const countries=['Brasil','Canadá','Chile','Peru'];
+  const metrics=countries.map(c=>{
+    const cd=data.filter(r=>r.country===c);
+    return {c,n:cd.length,risk:Number(likertMean(cd,'q6'))||0,cost:Number(likertMean(cd,'q13'))||0,social:Number(likertMean(cd,'q24'))||0,reg:Number(likertMean(cd,'q18'))||0,mat:Number(likertMean(cd,'q26'))||0};
+  }).filter(x=>x.n>0);
+  return `<div class="chart-card" style="margin-bottom:12px"><div class="chart-card-title">Comparativo de Médias por País <span>Likert 1–5</span></div><div class="chart-wrap tall"><canvas id="chart-country-compare"></canvas></div></div>
+  <div class="chart-card"><table class="freq-table"><thead><tr><th>País</th><th>n</th><th>Risco</th><th>Custo</th><th>Lic.Social</th><th>Regulação</th><th>Maturidade</th></tr></thead><tbody>
+    ${metrics.map(x=>`<tr><td><strong style="color:var(--text)">${x.c}</strong></td><td>${x.n}</td><td>${x.risk||'—'}</td><td>${x.cost||'—'}</td><td>${x.social||'—'}</td><td>${x.reg||'—'}</td><td>${x.mat||'—'}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function renderProfileCompare(data){
+  const profiles=['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)'];
+  const short=['Gestor','Técnico','ESG','Regulador'];
+  const metrics=profiles.map((p,i)=>{
+    const pd=data.filter(r=>r.profile===p||getAns(r,'q2')===p);
+    return {label:short[i],n:pd.length,risk:Number(likertMean(pd,'q6'))||0,cost:Number(likertMean(pd,'q13'))||0,social:Number(likertMean(pd,'q24'))||0,reg:Number(likertMean(pd,'q18'))||0,mat:Number(likertMean(pd,'q26'))||0};
+  }).filter(x=>x.n>0);
+  return `<div class="chart-card" style="margin-bottom:12px"><div class="chart-card-title">Comparativo por Perfil <span>Radar — Likert 1–5</span></div><div class="chart-wrap tall"><canvas id="chart-profile-radar"></canvas></div></div>
+  <div class="chart-card"><table class="freq-table"><thead><tr><th>Perfil</th><th>n</th><th>Risco</th><th>Custo</th><th>Lic.Social</th><th>Regulação</th><th>Maturidade</th></tr></thead><tbody>
+    ${metrics.map(x=>`<tr><td><strong style="color:var(--text)">${x.label}</strong></td><td>${x.n}</td><td>${x.risk||'—'}</td><td>${x.cost||'—'}</td><td>${x.social||'—'}</td><td>${x.reg||'—'}</td><td>${x.mat||'—'}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+// ── CHARTS ────────────────────────────────────────────────────
+const PAL=['#C8813A','#2EC4A0','#4A9EE8','#F5B642','#9B6EE8','#E05C5C','#5CA0E8','#7ECBA5'];
+const CD={plugins:{legend:{labels:{color:'#8A99AA',font:{family:'Inter',size:11}}}},scales:{x:{ticks:{color:'#8A99AA',font:{family:'Inter',size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#8A99AA',font:{family:'Inter',size:10}},grid:{color:'rgba(255,255,255,.04)'}}}};
+
+function mkBar(id,labels,datasets,opts={}){
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,...CD,...opts}});
+}
+function mkDoughnut(id,labels,data,colors){
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8A99AA',font:{family:'Inter',size:10},boxWidth:10,padding:10}}}}});
+}
+function mkRadar(id,labels,datasets){
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'radar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:5,ticks:{color:'#8A99AA',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.06)'},pointLabels:{color:'#8A99AA',font:{size:10}},angleLines:{color:'rgba(255,255,255,.06)'}}},plugins:{legend:{labels:{color:'#8A99AA',font:{family:'Inter',size:10},boxWidth:10}}}}});
+}
+
+function drawCharts(section,data){
+  if(section==='overview'){
+    const countries=['Brasil','Canadá','Chile','Peru'];
+    mkBar('chart-country',countries,[{data:countries.map(c=>data.filter(r=>r.country===c).length),backgroundColor:PAL,borderRadius:5,borderSkipped:false}],{plugins:{legend:{display:false}}});
+    const d=likertDist(data,'q6');
+    mkBar('chart-risk-dist',['1','2','3','4','5'],[{data:[d[1],d[2],d[3],d[4],d[5]],backgroundColor:['#4A9EE8','#2EC4A0','#F5B642','#E8823A','#E05C5C'],borderRadius:4,borderSkipped:false}],{plugins:{legend:{display:false}}});
+    const q2=adminQuestions.find(q=>q.id==='q2');
+    const ft2=freqTable(data,'q2',q2?.options||[]);
+    mkDoughnut('chart-profiles',ft2.map(x=>x.label.split(' ')[0]),ft2.map(x=>x.count),PAL);
+    const q10=adminQuestions.find(q=>q.id==='q10');
+    const ft10=freqTable(data,'q10',q10?.options||[]);
+    mkDoughnut('chart-strategy',ft10.map(x=>x.label),ft10.map(x=>x.count),PAL);
+  }
+  if(section==='profile'){
+    const q2=adminQuestions.find(q=>q.id==='q2'),q3=adminQuestions.find(q=>q.id==='q3');
+    const ft2=freqTable(data,'q2',q2?.options||[]);
+    mkDoughnut('chart-q2',ft2.map(x=>x.label.split(' ')[0]),ft2.map(x=>x.count),PAL);
+    const ft3=freqTable(data,'q3',q3?.options||[]);
+    mkBar('chart-q3',ft3.map(x=>x.label),[{data:ft3.map(x=>x.count),backgroundColor:PAL,borderRadius:4,borderSkipped:false}],{plugins:{legend:{display:false}}});
+  }
+  if(section==='vuln'){
+    const d=likertDist(data,'q6');
+    mkBar('chart-risk-likert',['1','2','3','4','5'],[{data:[d[1],d[2],d[3],d[4],d[5]],backgroundColor:['#4A9EE8','#2EC4A0','#F5B642','#E8823A','#E05C5C'],borderRadius:4,borderSkipped:false}],{plugins:{legend:{display:false}}});
+  }
+  if(section==='strategies'){
+    const q11=adminQuestions.find(q=>q.id==='q11');
+    const md=matrixMeans(data,'q11',q11?.rows||[]);
+    mkBar('chart-matrix',md.map(x=>x.row.length>22?x.row.slice(0,19)+'…':x.row),[{data:md.map(x=>x.mean),backgroundColor:PAL[0]+'CC',borderRadius:4,borderSkipped:false}],{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CD.scales.x,min:0,max:5},y:{...CD.scales.y}}});
+  }
+  if(section==='operational'){
+    const q15=adminQuestions.find(q=>q.id==='q15');
+    const ft15=freqTable(data,'q15',q15?.options||[]);
+    mkDoughnut('chart-q15',ft15.map(x=>x.label),ft15.map(x=>x.count),PAL);
+  }
+  if(section==='maturity'){
+    const d=likertDist(data,'q26');
+    mkBar('chart-maturity',['1','2','3','4','5'],[{data:[d[1],d[2],d[3],d[4],d[5]],backgroundColor:['#4A5562','#4A9EE8','#F5B642','#E8823A','#C8813A'],borderRadius:4,borderSkipped:false}],{plugins:{legend:{display:false}}});
+  }
+  if(section==='country'){
+    const countries=['Brasil','Canadá','Chile','Peru'];
+    const indicators=['Risco (Q6)','Custo (Q13)','Lic.Social (Q24)','Regulação (Q18)','Maturidade (Q26)'];
+    const qids=['q6','q13','q24','q18','q26'];
+    const datasets=countries.map((c,ci)=>{
+      const cd=data.filter(r=>r.country===c);
+      return {label:c,data:qids.map(q=>Number(likertMean(cd,q))||0),backgroundColor:PAL[ci]+'66',borderColor:PAL[ci],borderWidth:2,borderRadius:3};
+    });
+    mkBar('chart-country-compare',indicators,datasets,{scales:{...CD.scales,y:{...CD.scales.y,min:0,max:5}}});
+  }
+  if(section==='profile-compare'){
+    const profiles=['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)'];
+    const short=['Gestor','Técnico','ESG','Regulador'];
+    const qids=['q6','q13','q24','q18','q26'];
+    const datasets=profiles.map((p,i)=>{
+      const pd=data.filter(r=>r.profile===p||getAns(r,'q2')===p);
+      return {label:short[i],data:qids.map(q=>Number(likertMean(pd,q))||0),borderColor:PAL[i],backgroundColor:PAL[i]+'33',borderWidth:2,pointBackgroundColor:PAL[i],pointRadius:4};
+    }).filter(d=>d.data.some(v=>v>0));
+    mkRadar('chart-profile-radar',['Risco','Custo','Lic. Social','Regulação','Maturidade'],datasets);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════════════════════════
+function exportCSV(){
+  if(!responses.length){alert('Sem dados.');return;}
+  const qids=adminQuestions.map(q=>q.id);
+  const header=['response_id','lang','timestamp','country','profile','completed',...qids].join(',');
+  const rows=responses.map(r=>{
+    const vals=qids.map(id=>{
+      const a=r.answers[id]; if(!a) return '';
+      if(a.value!==undefined) return String(a.value).replace(/,/g,';');
+      if(a.values) return a.values.join('|').replace(/,/g,';');
+      if(a.rows) return Object.values(a.rows).join('|');
+      return '';
+    });
+    return [r.meta.id,r.meta.lang,r.meta.timestamp,r.country||'',r.profile||'',r.completed,...vals].join(',');
+  });
+  const blob=new Blob([[header,...rows].join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='mining_research_'+Date.now()+'.csv'; a.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+loadQuestions();
+// Inicia na aba dashboard e carrega dados se credenciais presentes
+switchPane('dashboard');
+if(SUPABASE_URL && SUPABASE_ANON){
+  loadResponses();
+  startAutoRefresh();
+}
+</script>
+</body>
+</html>
