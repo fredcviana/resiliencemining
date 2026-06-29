@@ -1097,8 +1097,7 @@ function runKruskal(){
 `;
   html += `${'Variável'.padEnd(32)} ${'H'.padStart(7)} ${'df'.padStart(4)} ${'p-value'.padStart(14)}   Conclusão
 `;
-  html += '─'.repeat(80) + '
-';
+  html += '─'.repeat(80) + '\n';
 
   vars.forEach(({qid, label}) => {
     const groups = countries.map(c => getLikertVals(data.filter(r=>r.country===c), qid)).filter(g=>g.length>0);
@@ -1176,8 +1175,7 @@ function runChiSquare(){
 `;
     if(minExpected < 5) html += `  <span class="nosig">⚠ Freq. esperada mínima = ${minExpected.toFixed(1)} (< 5 — interpretar com cautela)</span>
 `;
-    html += '
-';
+    html += '\n';
   });
 
   html += `<span class="note">* p &lt; 0.05  ** p &lt; 0.01  *** p &lt; 0.001  ns = não significativo</span>`;
@@ -1213,9 +1211,7 @@ function runSpearman(){
   const pad = 12;
   html += ' '.repeat(12);
   vars.forEach(v => { html += v.label.slice(0,pad).padStart(pad); });
-  html += '
-' + '─'.repeat(12 + pad*vars.length) + '
-';
+  html += '\n' + '─'.repeat(12 + pad*vars.length) + '\n';
 
   vars.forEach((v,i) => {
     html += v.label.padEnd(12);
@@ -1231,8 +1227,7 @@ function runSpearman(){
                                `<span class="nosig">${cell}${sigMark}</span>`;
       html += styled.padStart(pad+(styled.length-cell.length-sigMark.length));
     });
-    html += '
-';
+    html += '\n';
   });
 
   html += `
@@ -1359,8 +1354,7 @@ function runCronbach(){
 `;
   html += `${'Dimensão'.padEnd(36)} ${'k'.padStart(4)} ${'n'.padStart(6)} ${'α'.padStart(8)}   Avaliação
 `;
-  html += '─'.repeat(72) + '
-';
+  html += '─'.repeat(72) + '\n';
 
   dimensions.forEach(({label, qids, names}) => {
     if(qids.length < 2){ html += `${label.padEnd(36)} <span class="note">— (k < 2)</span>
@@ -1406,8 +1400,7 @@ function runDescriptive(){
 `;
   html += `${'Variável'.padEnd(30)} ${'n'.padStart(5)} ${'Mín'.padStart(5)} ${'Máx'.padStart(5)} ${'Média'.padStart(8)} ${'Mediana'.padStart(9)} ${'DP'.padStart(7)}
 `;
-  html += '─'.repeat(72) + '
-';
+  html += '─'.repeat(72) + '\n';
 
   vars.forEach(({qid, label}) => {
     const vals = getLikertVals(data, qid);
