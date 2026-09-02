@@ -514,7 +514,7 @@ CREATE POLICY "allow_insert_update" ON survey_responses
           <div class="s-stat-tile c"><div class="s-stat-lbl">Total</div><div class="s-stat-val" id="ms-total">—</div><div class="s-stat-sub">respostas</div></div>
           <div class="s-stat-tile t"><div class="s-stat-lbl">Completas</div><div class="s-stat-val" id="ms-complete">—</div><div class="s-stat-sub">enviadas</div></div>
           <div class="s-stat-tile g"><div class="s-stat-lbl">Conclusão</div><div class="s-stat-val" id="ms-rate">—</div><div class="s-stat-sub">% finalizaram</div></div>
-          <div class="s-stat-tile r"><div class="s-stat-lbl">Meta</div><div class="s-stat-val">200</div><div class="s-stat-sub">total esperado</div></div>
+          <div class="s-stat-tile r"><div class="s-stat-lbl">Meta Total</div><div class="s-stat-val" id="ms-goal-display">—</div><div class="s-stat-sub"><span id="ms-goal-per">—</span>/país · <button onclick="editGoal()" style="background:none;border:none;color:var(--copper);font-size:10px;cursor:pointer;font-family:Inter,sans-serif;padding:0">✎ editar</button></div></div>
         </div>
         <div class="chart-grid cols2" style="margin-bottom:16px">
           <div class="chart-card"><div class="chart-card-title">Por País <span>meta: 50 cada</span></div><div class="chart-wrap short"><canvas id="chart-mon-country"></canvas></div></div>
@@ -1171,7 +1171,11 @@ function renderMonitor(){
   document.getElementById('ms-total').textContent=n;
   document.getElementById('ms-complete').textContent=c;
   document.getElementById('ms-rate').textContent=n>0?Math.round(c/n*100)+'%':'—';
-  const GOAL=50,countries=['Brasil','Canadá','Chile','Peru'];
+  const GOAL_PER = parseInt(localStorage.getItem('goal_per_country') || '50');
+  const GOAL_TOTAL = GOAL_PER * 4;
+  document.getElementById('ms-goal-display').textContent = GOAL_TOTAL;
+  document.getElementById('ms-goal-per').textContent = GOAL_PER;
+  const GOAL = GOAL_PER, countries=['Brasil','Canadá','Chile','Peru'];
   const profiles=['Gestor(a) / Executivo(a)','Técnico(a) / Engenheiro(a) de operações','Profissional de ESG / Sustentabilidade','Regulador(a) / Agente público(a)','Outro'];
   const shortP=['Gestor','Técnico','ESG','Regulador','Outro'];
   const cc=countries.map(c=>responses.filter(r=>r.country===c).length);
@@ -1180,7 +1184,7 @@ function renderMonitor(){
   if(charts['chart-mon-timeline'])charts['chart-mon-timeline'].destroy();
   mkChart('chart-mon-country',{type:'bar',data:{labels:countries,datasets:[
     {label:'Coletadas',data:cc,backgroundColor:PAL.map(c=>c+'CC'),borderRadius:4,borderSkipped:false},
-    {label:'Meta',data:[GOAL,GOAL,GOAL,GOAL],type:'line',borderColor:'#F5B642',borderWidth:1.5,borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
+    {label:`Meta (${GOAL_PER})`,data:[GOAL_PER,GOAL_PER,GOAL_PER,GOAL_PER],type:'line',borderColor:'#F5B642',borderWidth:1.5,borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
   ]},options:{...CD,plugins:{...CD.plugins,legend:{display:false}},scales:{...CD.scales,y:{...CD.scales.y,max:60}}}});
   const pc=profiles.map(p=>responses.filter(r=>r.profile===p||getAns(r,'q2')===p).length);
   mkChart('chart-mon-profile',{type:'doughnut',data:{labels:shortP,datasets:[{data:pc,backgroundColor:PAL,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{color:'#8A99AA',font:{family:'Inter',size:10},boxWidth:10,padding:8}}}}});
@@ -1533,6 +1537,15 @@ function runCronbach(){
 // ══════════════════════════════════════════════════════════════
 // EXPORT
 // ══════════════════════════════════════════════════════════════
+function editGoal(){
+  const curr = localStorage.getItem('goal_per_country') || '50';
+  const val = prompt('Meta de respostas por país (atual: ' + curr + '):', curr);
+  if(val && !isNaN(parseInt(val)) && parseInt(val) > 0){
+    localStorage.setItem('goal_per_country', parseInt(val));
+    renderMonitor();
+  }
+}
+
 function exportCSV(){
   if(!responses.length){alert('Sem dados.');return;}
   const qids=adminQuestions.map(q=>q.id);
