@@ -80,11 +80,14 @@
   .opt-item.multi.selected .opt-check::after{content:'✓';font-size:11px;width:auto;height:auto;background:none;border-radius:0;}
 
   /* LIKERT */
-  .likert-wrap{display:flex;gap:6px;flex-wrap:wrap;}
-  .likert-btn{flex:1;min-width:44px;padding:10px 6px;border:1.5px solid rgba(0,0,0,.1);border-radius:8px;background:var(--white);cursor:pointer;text-align:center;font-size:18px;font-weight:700;color:var(--text-light);transition:all .15s;font-family:'Space Grotesk',sans-serif;}
-  .likert-btn:hover{border-color:var(--copper-light);}
-  .likert-btn.selected{background:var(--copper);border-color:var(--copper);color:white;transform:translateY(-2px);box-shadow:0 4px 12px rgba(184,115,51,.3);}
-  .likert-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-light);font-style:italic;}
+  .likert-full-wrap{display:flex;flex-direction:column;gap:6px;}
+  .likert-full-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1.5px solid rgba(0,0,0,.08);border-radius:8px;background:var(--white);cursor:pointer;text-align:left;transition:all .15s;font-family:'Inter',sans-serif;width:100%;}
+  .likert-full-btn:hover{border-color:var(--copper-light);background:#FDF8F4;}
+  .likert-full-btn.selected{border-color:var(--copper);background:#FDF5EC;}
+  .likert-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text-light);transition:all .15s;}
+  .likert-full-btn.selected .likert-num{background:var(--copper);border-color:var(--copper);color:white;}
+  .likert-lbl{font-size:13px;color:var(--text-mid);line-height:1.3;}
+  .likert-full-btn.selected .likert-lbl{color:var(--text);font-weight:500;}
 
   /* MATRIX */
   .matrix-wrap{overflow-x:auto;}
@@ -138,7 +141,6 @@
     .lang-title{font-size:1.5rem;}
     .survey-main{padding:1.5rem 1rem 6rem;}
     .block-title{font-size:1.2rem;}
-    .likert-btn{font-size:15px;padding:8px 4px;}
   }
 </style>
 </head>
@@ -255,8 +257,10 @@ const T = {
       {eyebrow:"Bloco 6",title:"Maturidade e Prospecção",desc:"Autoavaliação, prioridades e cooperação"},
     ],
     scaleLabels:{
-      risk:["Nenhum risco","Risco crítico"],adequacy:["Muito inadequado","Muito adequado"],
-      maturity:["Muito abaixo","Líder setorial"],impact:["Nenhum impacto","Impacto muito alto"],
+      risk:["Nenhum risco percebido","Risco baixo","Risco moderado","Risco alto","Risco crítico / existencial"],
+      adequacy:["Muito inadequado / inexistente","Inadequado com lacunas importantes","Parcialmente adequado","Adequado com algumas lacunas","Muito adequado e abrangente"],
+      maturity:["Muito abaixo da média do setor","Abaixo da média","Na média do setor","Acima da média","Líder / referência no setor"],
+      impact:["Nenhum impacto identificado","Impacto leve e pontual","Impacto moderado e crescente","Impacto significativo nas operações","Impacto muito significativo"],
     }
   },
   en:{
@@ -275,8 +279,10 @@ const T = {
       {eyebrow:"Block 6",title:"Maturity & Foresight",desc:"Self-assessment, priorities and cooperation"},
     ],
     scaleLabels:{
-      risk:["No risk","Critical risk"],adequacy:["Very inadequate","Very adequate"],
-      maturity:["Far below average","Sector leader"],impact:["No impact","Very high impact"],
+      risk:["No risk perceived","Low risk","Moderate risk","High risk","Critical / existential risk"],
+      adequacy:["Very inadequate / nonexistent","Inadequate with major gaps","Partially adequate","Adequate with some gaps","Very adequate and comprehensive"],
+      maturity:["Far below sector average","Below average","At sector average","Above average","Leader / sector reference"],
+      impact:["No impact identified","Minor, isolated impact","Moderate and growing impact","Significant operational impact","Very significant impact"],
     }
   },
   es:{
@@ -295,8 +301,10 @@ const T = {
       {eyebrow:"Bloque 6",title:"Madurez y Prospección",desc:"Autoevaluación, prioridades y cooperación"},
     ],
     scaleLabels:{
-      risk:["Sin riesgo","Riesgo crítico"],adequacy:["Muy inadecuado","Muy adecuado"],
-      maturity:["Muy por debajo","Líder sectorial"],impact:["Sin impacto","Impacto muy alto"],
+      risk:["Sin riesgo percibido","Riesgo bajo","Riesgo moderado","Riesgo alto","Riesgo crítico / existencial"],
+      adequacy:["Muy inadecuado / inexistente","Inadecuado con brechas importantes","Parcialmente adecuado","Adecuado con algunas brechas","Muy adecuado y completo"],
+      maturity:["Muy por debajo del promedio sectorial","Por debajo del promedio","En el promedio del sector","Por encima del promedio","Líder / referencia sectorial"],
+      impact:["Sin impacto identificado","Impacto leve y puntual","Impacto moderado y creciente","Impacto significativo en operaciones","Impacto muy significativo"],
     }
   }
 };
@@ -476,7 +484,7 @@ function renderBlock(blockIdx){
         if(saved.values&&saved.values.includes(el.dataset.val)) el.classList.add('selected');
       });
     } else if(q.type==='likert5'){
-      document.querySelectorAll(`[data-qid="${q.id}"] .likert-btn`).forEach(btn=>{
+      document.querySelectorAll(`[data-qid="${q.id}"] .likert-full-btn`).forEach(btn=>{
         if(saved.value==btn.dataset.val) btn.classList.add('selected');
       });
     } else if(q.type==='matrix'){
@@ -515,11 +523,13 @@ function renderQuestion(q,num){
        </div>`
     ).join('')}</div>${note}`;
   } else if(q.type==='likert5'){
-    const sl=t.scaleLabels[q.scaleKey]||['',''];
-    inner=`<div class="likert-wrap">
-      ${[1,2,3,4,5].map(n=>`<button class="likert-btn" data-val="${n}" onclick="selectLikert(this,'${q.id}')">${n}</button>`).join('')}
-    </div>
-    <div class="likert-labels"><span>${sl[0]}</span><span>${sl[1]}</span></div>`;
+    const sl=t.scaleLabels[q.scaleKey]||['1','2','3','4','5'];
+    inner=`<div class="likert-full-wrap">
+      ${[0,1,2,3,4].map(i=>`<button class="likert-full-btn" data-val="${i+1}" onclick="selectLikert(this,'${q.id}')">
+        <span class="likert-num">${i+1}</span>
+        <span class="likert-lbl">${sl[i]}</span>
+      </button>`).join('')}
+    </div>`;
   } else if(q.type==='matrix'){
     const colH=q.cols.map(c=>`<th>${c}</th>`).join('');
     const rowsH=q.rows.map((r,ri)=>`<tr>
@@ -572,7 +582,7 @@ function selectOpt(el,qid,type,max){
 
 function selectLikert(btn,qid){
   const container=btn.closest(`[data-qid="${qid}"]`);
-  container.querySelectorAll('.likert-btn').forEach(b=>b.classList.remove('selected'));
+  container.querySelectorAll('.likert-full-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
   answers[qid]={value:parseInt(btn.dataset.val)};
   container.classList.remove('required-error');
